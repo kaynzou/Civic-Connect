@@ -20,6 +20,7 @@
   --radius-lg:26px; --radius-md:18px; --radius-sm:12px;
   --blur:blur(28px) saturate(190%);
 }
+  /* CiviConnect Darktheme */
 [data-theme="dark"]{
   --bg-1:#05060d; --bg-2:#0a0d1c; --bg-3:#0e1330;
   --glass:rgba(22,26,48,.42); --glass-hi:rgba(28,32,58,.68);
@@ -787,6 +788,8 @@ async function submitComplaint(){
   // Try the real backend first. This never blocks the existing local-demo flow below —
   // if the network call fails for any reason, the app still behaves exactly as it did before.
   let realId = null;
+  let translatedText = null;
+  let detectedLanguage = null;
   try {
     const formData = new FormData();
     formData.append('category', cat.label);
@@ -799,6 +802,14 @@ async function submitComplaint(){
     if(res.ok){
       const data = await res.json();
       realId = data.id ? data.id.replace('#','') : null;
+      // Only worth showing a translation if it actually differs from the original —
+      // otherwise it's just noise (e.g. the complaint was already in English).
+      if(data.translated_text && data.translated_text.trim() !== descriptionText.trim()){
+        translatedText = data.translated_text;
+      }
+      if(data.detected_language && data.detected_language !== 'unknown'){
+        detectedLanguage = data.detected_language;
+      }
     }
   } catch(err) {
     // Backend unreachable — fall through to the local-only simulated ID below.
@@ -811,6 +822,8 @@ async function submitComplaint(){
     wardId: cat.geoLock ? CITIZEN_HOME_WARD : CITIZEN_HOME_WARD, status:'pending', severity:state.raise.severity,
     upvotes:0, daysPending:0, communityVerified:false, govVerified:false, assigned:'Ward Councillor', createdDaysAgo:0, isCrime:cat.id==='crime',
   });
+  c.translatedText = translatedText;
+  c.detectedLanguage = detectedLanguage;
   c.images = state.raise.images;
   complaints.unshift(c);
   state.lastSubmittedId = id;
@@ -857,6 +870,13 @@ function screenDetails(){
         </div>
       </div>
       <p style="font-size:13.5px;line-height:1.6;margin:14px 0;">${c.description}</p>
+      ${c.translatedText ? `
+      <div class="glass-card tight" style="background:rgba(63,123,240,.08);border-color:rgba(63,123,240,.3);margin:-4px 0 14px;">
+        <p style="font-size:10.5px;font-weight:700;color:var(--info);margin:0 0 4px;text-transform:uppercase;letter-spacing:.03em;">
+          🌐 Translated${c.detectedLanguage ? ` from ${c.detectedLanguage}` : ''} to English
+        </p>
+        <p style="font-size:13px;line-height:1.6;margin:0;color:var(--text);">${c.translatedText}</p>
+      </div>` : ''}
       ${c.images.length?`<div class="row gap8" style="margin-bottom:10px;">${c.images.map(img=>`<img class="thumb" src="${img.url}">`).join('')}</div>`:''}
       <div class="row between" style="font-size:12px;color:var(--text-2);margin-top:6px;">
         <span>📍 ${w.village}, ${w.name}</span><span>${w.district}, ${w.state}</span>
