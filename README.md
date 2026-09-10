@@ -17,7 +17,7 @@ civicconnect/
 
 ## Quick start
 
-**See it now (no setup):** open `prototype/index.html` in any browser. Every
+**See it now (no setup):** open `https://kaynzou.github.io/Civic-Connect/` in any browser. Every
 screen and interaction — login, raising a complaint with the geo-lock check,
 the verification-button animation, community upvoting, and jurisdiction-
 scoped government dashboards for all six roles — is live, with mock data and
