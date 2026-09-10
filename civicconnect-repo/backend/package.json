@@ -1,0 +1,19 @@
+{
+  "name": "civicconnect-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Supabase schema, RLS policies, and service layer for the CivicConnect civic grievance platform.",
+  "scripts": {
+    "seed:users": "ts-node seed/002_seed_users.ts",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.14.0"
+  }
+}

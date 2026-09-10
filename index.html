@@ -1,0 +1,2610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CivicConnect</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-1:#eef1ff; --bg-2:#e3e9ff; --bg-3:#dceafe;
+  --glass:rgba(255,255,255,.42); --glass-hi:rgba(255,255,255,.68);
+  --border:rgba(255,255,255,.75); --shadow:0 12px 34px rgba(35,42,90,.16);
+  --rim-top:rgba(255,255,255,.75); --rim-bottom:rgba(35,42,90,.06);
+  --sheen:linear-gradient(155deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.08) 30%, rgba(255,255,255,0) 55%, rgba(255,255,255,.14) 100%);
+  --text:#1c2036; --text-2:#5c6280; --text-3:#8a90ab;
+  --accent:#5a4fe0; --accent-2:#3f7bf0; --accent-grad:linear-gradient(135deg,#6a5cf0,#3f7bf0);
+  --success:#12a454; --success-2:#0e8a45; --warn:#e08a1e; --danger:#e0435a; --info:#3f7bf0;
+  --nav:rgba(255,255,255,.62); --chip:rgba(255,255,255,.38);
+  --radius-lg:26px; --radius-md:18px; --radius-sm:12px;
+  --blur:blur(28px) saturate(190%);
+}
+  /* CiviConnect Darktheme */
+[data-theme="dark"]{
+  --bg-1:#05060d; --bg-2:#0a0d1c; --bg-3:#0e1330;
+  --glass:rgba(22,26,48,.42); --glass-hi:rgba(28,32,58,.68);
+  --border:rgba(255,255,255,.13); --shadow:0 12px 38px rgba(0,0,0,.6);
+  --rim-top:rgba(255,255,255,.14); --rim-bottom:rgba(0,0,0,.4);
+  --sheen:linear-gradient(155deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.03) 30%, rgba(255,255,255,0) 55%, rgba(139,131,255,.10) 100%);
+  --text:#eef0fb; --text-2:#a7adce; --text-3:#767ca0;
+  --accent:#8b83ff; --accent-2:#5b9dff; --accent-grad:linear-gradient(135deg,#8b83ff,#5b9dff);
+  --success:#2fd47e; --success-2:#1fb56a; --warn:#f5a742; --danger:#ff6b7f; --info:#5b9dff;
+  --nav:rgba(10,13,26,.58); --chip:rgba(255,255,255,.05);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',system-ui,sans-serif; color:var(--text);
+  background:
+    radial-gradient(circle at 12% -8%, var(--bg-3), transparent 50%),
+    radial-gradient(circle at 105% 8%, var(--bg-2), transparent 45%),
+    radial-gradient(circle at 40% 110%, var(--accent) 0%, transparent 32%),
+    var(--bg-1);
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:18px 0; transition:background .4s ease; position:relative; overflow:hidden;
+}
+body::before, body::after{
+  content:''; position:fixed; border-radius:50%; filter:blur(70px); z-index:0; pointer-events:none;
+  animation:floaty 14s ease-in-out infinite alternate;
+}
+body::before{width:340px; height:340px; background:radial-gradient(circle, rgba(90,79,224,.35), transparent 70%); top:-8%; left:-10%;}
+body::after{width:300px; height:300px; background:radial-gradient(circle, rgba(63,123,240,.3), transparent 70%); bottom:-10%; right:-8%; animation-delay:-7s;}
+@keyframes floaty{from{transform:translate(0,0) scale(1);} to{transform:translate(20px,-24px) scale(1.08);}}
+h1,h2,h3,.display{font-family:'Manrope',sans-serif;}
+.phone{
+  width:390px; max-width:96vw; height:844px; max-height:94vh;
+  background:var(--glass-hi); border:1px solid var(--border);
+  border-radius:44px;
+  box-shadow:0 30px 70px rgba(20,24,60,.3), 0 0 0 1px rgba(255,255,255,.05),
+    inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bottom);
+  overflow:hidden; position:relative; display:flex; flex-direction:column;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); z-index:1;
+}
+.phone::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:var(--sheen); mix-blend-mode:soft-light;
+}
+.notch{position:absolute; top:0; left:50%; transform:translateX(-50%); width:120px; height:26px; background:#000; border-radius:0 0 18px 18px; z-index:50;}
+.statusbar{display:flex; justify-content:space-between; padding:16px 26px 4px; font-size:13px; font-weight:700; color:var(--text); flex-shrink:0;}
+.screen-root{flex:1; overflow-y:auto; overflow-x:hidden; position:relative; scrollbar-width:none;}
+.screen-root::-webkit-scrollbar{display:none;}
+.screen{padding:14px 20px 100px; animation:fadeUp .35s ease;}
+.screen.no-pad-bottom{padding-bottom:24px;}
+@keyframes fadeUp{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+
+/* ---- liquid glass components ---- */
+.glass-card{
+  background:var(--glass); border:1px solid var(--border); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow), inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bottom);
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  padding:18px; position:relative; overflow:hidden; isolation:isolate;
+}
+.glass-card::before{
+  content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit;
+  background:var(--sheen); mix-blend-mode:soft-light; pointer-events:none;
+}
+.glass-card.tight{padding:14px;}
+.btn{
+  border:none; border-radius:16px; padding:15px 20px; font-family:'Inter',sans-serif; font-weight:700;
+  font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:transform .15s ease, box-shadow .15s ease; -webkit-user-select:none; user-select:none;
+}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:var(--accent-grad); color:#fff; box-shadow:0 10px 24px rgba(90,79,224,.35);}
+.btn-primary.full{width:100%;}
+.btn-ghost{background:var(--chip); color:var(--text); border:1px solid var(--border); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:inset 0 1px 0 var(--rim-top);}
+.btn-ghost.full{width:100%;}
+.btn-outline{background:rgba(255,255,255,.04); border:1.5px solid var(--accent); color:var(--accent); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);}
+.btn-sm{padding:9px 14px; font-size:13px; border-radius:12px;}
+.btn-danger{background:rgba(224,67,90,.14); color:var(--danger); border:1px solid rgba(224,67,90,.3); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);}
+.btn-success{background:rgba(18,164,84,.14); color:var(--success); border:1px solid rgba(18,164,84,.3); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);}
+input,select,textarea{
+  width:100%; background:var(--chip); border:1px solid var(--border); border-radius:14px;
+  padding:13px 14px; font-family:'Inter',sans-serif; font-size:14.5px; color:var(--text); outline:none;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:inset 0 1px 0 var(--rim-top);
+  color-scheme:light; /* keeps native pickers (date, select list) readable per-theme, set below */
+}
+textarea{resize:none; min-height:80px;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+input::placeholder, textarea::placeholder{color:var(--text-3); opacity:1;}
+input:disabled, select:disabled, textarea:disabled{
+  color:var(--text-2); -webkit-text-fill-color:var(--text-2); opacity:1;
+}
+[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea{color-scheme:dark;}
+select{color:var(--text);}
+select option{background:var(--glass-hi); color:var(--text);}
+label{font-size:12.5px; font-weight:700; color:var(--text-2); margin:0 0 6px 2px; display:block; letter-spacing:.2px;}
+.field{margin-bottom:14px;}
+.link{color:var(--accent); font-weight:700; cursor:pointer;}
+.muted{color:var(--text-2);}
+.center{text-align:center;}
+.row{display:flex; align-items:center;}
+.between{justify-content:space-between;}
+.gap8{gap:8px;} .gap10{gap:10px;} .gap12{gap:12px;} .gap6{gap:6px;}
+.icon-btn{
+  width:40px; height:40px; border-radius:14px; background:var(--chip); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:17px;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:inset 0 1px 0 var(--rim-top);
+}
+.icon-btn:active{transform:scale(.92);}
+
+/* status badges */
+.badge{padding:5px 11px; border-radius:100px; font-size:11px; font-weight:800; letter-spacing:.2px; white-space:nowrap;}
+.badge-pending{background:rgba(140,146,180,.18); color:var(--text-2);}
+.badge-verified{background:rgba(63,123,240,.15); color:var(--info);}
+.badge-progress{background:rgba(224,138,30,.15); color:var(--warn);}
+.badge-resolved{background:rgba(18,164,84,.15); color:var(--success);}
+.badge-escalated{background:rgba(224,67,90,.15); color:var(--danger);}
+.badge-pushed{background:rgba(90,79,224,.15); color:var(--accent);}
+
+/* bottom nav */
+.bottomnav{
+  position:absolute; bottom:0; left:0; right:0; background:var(--nav);
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  border-top:1px solid var(--border); box-shadow:inset 0 1px 0 var(--rim-top);
+  display:flex; padding:10px 8px calc(env(safe-area-inset-bottom) + 10px);
+  z-index:40;
+}
+.nav-item{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; padding:6px 2px; border-radius:14px; color:var(--text-3);}
+.nav-item.active{color:var(--accent);}
+.nav-item .ni-icon{font-size:19px;}
+.nav-item .ni-fab{width:46px; height:46px; border-radius:16px; background:var(--accent-grad); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; margin-top:-24px; box-shadow:0 10px 22px rgba(90,79,224,.4); font-weight:700;}
+.nav-label{font-size:10px; font-weight:700;}
+
+/* complaint card */
+.complaint-card{
+  display:flex; gap:12px; align-items:flex-start; padding:14px; border-radius:18px;
+  background:var(--glass); border:1px solid var(--border); cursor:pointer; margin-bottom:10px;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  box-shadow:inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bottom), 0 6px 18px rgba(30,35,80,.08);
+  position:relative; overflow:hidden; isolation:isolate; transition:transform .15s ease;
+}
+.complaint-card::before{
+  content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit;
+  background:var(--sheen); mix-blend-mode:soft-light; pointer-events:none;
+}
+.complaint-card:active{transform:scale(.985);}
+.cat-icon{width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;}
+.cc-title{font-weight:700; font-size:14.5px; margin:0 0 2px;}
+.cc-meta{font-size:12px; color:var(--text-3);}
+
+/* verification button - the signature moment */
+.verify-pill{
+  display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 16px; border-radius:100px;
+  font-weight:800; font-size:12.5px; cursor:pointer; border:1.5px solid transparent; white-space:nowrap;
+  transition:width .45s cubic-bezier(.34,1.56,.64,1), padding .4s ease, background .35s ease, border-color .35s ease;
+  overflow:hidden; position:relative; backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5);
+}
+.verify-pill.unverified{background:rgba(18,164,84,.12); color:var(--success); border-color:rgba(18,164,84,.35);}
+.verify-pill.verifying{width:36px; padding:0; background:rgba(63,123,240,.12); border-color:rgba(63,123,240,.35); justify-content:center;}
+.verify-pill.verified{background:rgba(18,164,84,.16); color:var(--success); border-color:rgba(18,164,84,.4);}
+.verify-pill.rejected{background:rgba(224,67,90,.14); color:var(--danger); border-color:rgba(224,67,90,.35);}
+.verify-pill .vp-text{white-space:nowrap; transition:opacity .2s ease;}
+.verify-pill.verifying .vp-text{display:none;}
+.spinner-ring{width:16px; height:16px; border-radius:50%; border:2.5px solid rgba(63,123,240,.25); border-top-color:var(--accent-2); animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pulse-ok{animation:pulseOk .5s ease;}
+@keyframes pulseOk{0%{box-shadow:0 0 0 0 rgba(18,164,84,.45);} 100%{box-shadow:0 0 0 14px rgba(18,164,84,0);}}
+.verifying-caption{font-size:11.5px; color:var(--accent-2); font-weight:700; margin-top:6px;}
+
+/* upvote */
+.upvote-btn{
+  display:flex; flex-direction:column; align-items:center; gap:2px; background:var(--chip); border:1px solid var(--border);
+  border-radius:14px; padding:8px 12px; cursor:pointer; min-width:52px;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:inset 0 1px 0 var(--rim-top);
+}
+.upvote-btn.voted{background:rgba(90,79,224,.15); border-color:rgba(90,79,224,.4); color:var(--accent);}
+.upvote-btn:active .uv-arrow{animation:bump .3s ease;}
+@keyframes bump{0%{transform:translateY(0);}40%{transform:translateY(-4px);}100%{transform:translateY(0);}}
+.uv-arrow{font-size:15px; line-height:1;}
+.uv-count{font-size:12px; font-weight:800;}
+
+/* timeline */
+.tl-item{display:flex; gap:12px; margin-bottom:2px;}
+.tl-dot-col{display:flex; flex-direction:column; align-items:center;}
+.tl-dot{width:12px; height:12px; border-radius:50%; background:var(--text-3); flex-shrink:0; margin-top:3px;}
+.tl-dot.done{background:var(--success);}
+.tl-dot.escalated{background:var(--danger);}
+.tl-line{width:2px; flex:1; background:var(--border); min-height:26px;}
+.tl-body{padding-bottom:18px;}
+.tl-title{font-weight:700; font-size:13.5px;}
+.tl-date{font-size:11.5px; color:var(--text-3);}
+
+/* toggle */
+.seg{
+  display:flex; background:var(--chip); border-radius:14px; padding:4px; gap:4px;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur); box-shadow:inset 0 1px 0 var(--rim-top);
+}
+.seg-item{flex:1; text-align:center; padding:9px; border-radius:11px; font-weight:700; font-size:13px; cursor:pointer; color:var(--text-2); transition:background .2s ease, color .2s ease;}
+.seg-item.active{background:var(--glass-hi); color:var(--accent); box-shadow:0 3px 10px rgba(20,24,60,.12), inset 0 1px 0 rgba(255,255,255,.5);}
+
+.switch{width:44px; height:26px; border-radius:100px; background:var(--chip); border:1px solid var(--border); position:relative; cursor:pointer; flex-shrink:0;}
+.switch.on{background:var(--accent-grad); border-color:transparent;}
+.switch .knob{width:20px; height:20px; border-radius:50%; background:#fff; position:absolute; top:2px; left:2px; transition:left .25s ease; box-shadow:0 2px 5px rgba(0,0,0,.2);}
+.switch.on .knob{left:20px;}
+
+.chip{
+  padding:6px 12px; border-radius:100px; background:var(--chip); border:1px solid var(--border);
+  font-size:12px; font-weight:700; color:var(--text-2); cursor:pointer;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  box-shadow:inset 0 1px 0 var(--rim-top);
+}
+.chip.active{background:var(--accent-grad); color:#fff; border-color:transparent; box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 6px 16px rgba(90,79,224,.35);}
+
+.kpi{
+  background:var(--glass); border:1px solid var(--border); border-radius:16px; padding:12px; text-align:center;
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  box-shadow:inset 0 1px 0 var(--rim-top), inset 0 -1px 0 var(--rim-bottom);
+  position:relative; overflow:hidden; isolation:isolate;
+}
+.kpi::before{content:'';position:absolute; inset:0; z-index:-1; border-radius:inherit; background:var(--sheen); mix-blend-mode:soft-light; pointer-events:none;}
+.kpi .kn{font-family:'Manrope'; font-weight:800; font-size:19px;}
+.kpi .kl{font-size:10.5px; color:var(--text-3); font-weight:700; margin-top:2px;}
+
+.empty{padding:36px 20px; text-align:center;}
+.empty .ee{font-size:38px; margin-bottom:10px;}
+
+.toast{
+  position:absolute; left:20px; right:20px; bottom:100px; background:var(--text); color:var(--bg-1);
+  padding:13px 16px; border-radius:16px; font-size:13px; font-weight:600; z-index:80;
+  box-shadow:0 10px 30px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.15);
+  backdrop-filter:blur(20px) saturate(160%); -webkit-backdrop-filter:blur(20px) saturate(160%);
+  animation:toastIn .3s ease;
+}
+[data-theme="dark"] .toast{background:#eef0fb; color:#12142a;}
+@keyframes toastIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+
+.gps-box{
+  border:1.5px dashed var(--border); border-radius:16px; padding:14px; background:var(--chip);
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  box-shadow:inset 0 1px 0 var(--rim-top);
+}
+.gps-ok{border-color:rgba(18,164,84,.4); background:rgba(18,164,84,.1);}
+.gps-bad{border-color:rgba(224,67,90,.4); background:rgba(224,67,90,.1);}
+
+.avatar{width:38px; height:38px; border-radius:50%; background:var(--accent-grad); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px; flex-shrink:0;}
+
+.thumb{width:56px; height:56px; border-radius:12px; object-fit:cover; border:1px solid var(--border);}
+.thumb-add{width:56px; height:56px; border-radius:12px; border:1.5px dashed var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-3); cursor:pointer; font-size:20px;}
+
+.progressbar{height:6px; border-radius:100px; background:var(--chip); overflow:hidden;}
+.progressbar > div{height:100%; background:var(--accent-grad); border-radius:100px;}
+
+.priority-tag{font-weight:800; font-size:11px; padding:4px 10px; border-radius:100px;}
+.pr-high{background:rgba(224,67,90,.15); color:var(--danger);}
+.pr-medium{background:rgba(224,138,30,.15); color:var(--warn);}
+.pr-low{background:rgba(63,123,240,.15); color:var(--info);}
+
+::selection{background:rgba(90,79,224,.25);}
+.hidden{display:none !important;}
+
+/* --- Geospatial & Construction Area Mapping Styles --- */
+.map-wrap {
+  width: 100%;
+  height: 270px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  position: relative;
+  background: #0f1429;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.35);
+  margin: 10px 0;
+  z-index: 1;
+}
+.map-wrap-lg {
+  height: 350px;
+}
+.draw-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.draw-btn {
+  padding: 6px 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .2s;
+}
+.draw-btn.active, .draw-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.geo-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.geo-banner-danger {
+  background: rgba(224,67,90,0.14);
+  border: 1px solid rgba(224,67,90,0.4);
+  color: var(--danger);
+}
+.geo-banner-success {
+  background: rgba(18,164,84,0.14);
+  border: 1px solid rgba(18,164,84,0.4);
+  color: var(--success);
+}
+.geo-banner-info {
+  background: rgba(63,123,240,0.14);
+  border: 1px solid rgba(63,123,240,0.4);
+  color: var(--info);
+}
+.project-card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.project-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.project-overlay-modal {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 44px;
+  overflow: hidden;
+}
+.project-modal-content {
+  background: var(--glass-hi);
+  border-top: 1px solid var(--border);
+  border-radius: 28px 28px 0 0;
+  padding: 22px 20px 28px;
+  width: 100%;
+  max-height: 85%;
+  overflow-y: auto;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+}
+.badge-local {
+  background: rgba(224,138,30,0.18);
+  color: var(--warn);
+  border: 1px solid rgba(224,138,30,0.35);
+}
+.badge-major {
+  background: rgba(63,123,240,0.18);
+  color: var(--info);
+  border: 1px solid rgba(63,123,240,0.35);
+}
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: var(--glass-hi) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px) !important;
+}
+.leaflet-container {
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="notch"></div>
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span>●●●● 📶 🔋</span>
+  </div>
+  <div class="screen-root" id="screen-root"></div>
+  <div class="bottomnav hidden" id="bottomnav"></div>
+</div>
+
+<script>
+/* ============================= BACKEND CONNECTION ============================= */
+const API_BASE = "https://citycare-backend-ft8o.onrender.com/api";
+
+/* ============================= DATA LAYER (mock) ============================= */
+const CATEGORIES = [
+  {id:'crime', label:'Crime', icon:'🛡️', color:'#e0435a', desc:'Report illegal activity or a safety threat', geoLock:false},
+  {id:'community', label:'Community Problem', icon:'👥', color:'#5a4fe0', desc:'Issues affecting your neighbourhood', geoLock:true},
+  {id:'infrastructure', label:'Infrastructure', icon:'🏗️', color:'#3f7bf0', desc:'Roads, lights, water supply and more', geoLock:true},
+  {id:'environment', label:'Environment', icon:'🌿', color:'#12a454', desc:'Cleanliness, pollution, trees', geoLock:true},
+  {id:'water', label:'Water', icon:'💧', color:'#2b9fd8', desc:'Leakage, supply, contamination', geoLock:true},
+  {id:'electricity', label:'Electricity', icon:'⚡', color:'#e0a11e', desc:'Outages, exposed wiring, faults', geoLock:true},
+  {id:'roads', label:'Roads', icon:'🛣️', color:'#6b7280', desc:'Potholes, damaged surfaces', geoLock:true},
+  {id:'streetlights', label:'Street Lights', icon:'💡', color:'#e0a11e', desc:'Non-functional or missing lights', geoLock:true},
+  {id:'sanitation', label:'Sanitation', icon:'🧼', color:'#0e8a45', desc:'Public hygiene issues', geoLock:true},
+  {id:'garbage', label:'Garbage', icon:'🗑️', color:'#8a6d3b', desc:'Overflowing or uncollected waste', geoLock:true},
+  {id:'drainage', label:'Drainage', icon:'🌊', color:'#2b9fd8', desc:'Blocked or overflowing drains', geoLock:true},
+  {id:'publicsafety', label:'Public Safety', icon:'🚨', color:'#e0435a', desc:'Hazards to public safety', geoLock:true},
+  {id:'traffic', label:'Traffic', icon:'🚦', color:'#e0a11e', desc:'Congestion, signal faults', geoLock:true},
+  {id:'other', label:'Other', icon:'📋', color:'#6b7280', desc:'Anything else civic', geoLock:true},
+];
+const CAT = id => CATEGORIES.find(c=>c.id===id);
+
+const WARDS = [
+  {
+    id: 'ward24',
+    name: 'Ward 24 (Hazratganj)',
+    code: 'WARD-24',
+    village: 'Hazratganj',
+    subDistrict: 'Lucknow Sadar',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    country: 'India',
+    councillor: 'Ward Councillor · Ward 24',
+    center: [26.850, 80.945],
+    polygon: [
+      [26.845, 80.930],
+      [26.860, 80.932],
+      [26.862, 80.955],
+      [26.848, 80.958],
+      [26.840, 80.942],
+      [26.845, 80.930]
+    ]
+  },
+  {
+    id: 'ward42',
+    name: 'Ward 42 (Gomti Nagar)',
+    code: 'WARD-42',
+    village: 'Gomti Nagar',
+    subDistrict: 'Lucknow Sadar',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    country: 'India',
+    councillor: 'Ward Councillor · Ward 42',
+    center: [26.858, 80.990],
+    polygon: [
+      [26.845, 80.970],
+      [26.872, 80.972],
+      [26.875, 81.012],
+      [26.848, 81.010],
+      [26.845, 80.970]
+    ]
+  },
+  {
+    id: 'ward17',
+    name: 'Ward 17 (Aliganj)',
+    code: 'WARD-17',
+    village: 'Aliganj',
+    subDistrict: 'Lucknow Sadar',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    country: 'India',
+    councillor: 'Ward Councillor · Ward 17',
+    center: [26.890, 80.948],
+    polygon: [
+      [26.875, 80.930],
+      [26.905, 80.932],
+      [26.908, 80.965],
+      [26.878, 80.962],
+      [26.875, 80.930]
+    ]
+  },
+  {
+    id: 'ward7',
+    name: 'Ward 7 (Chowk)',
+    code: 'WARD-7',
+    village: 'Chowk',
+    subDistrict: 'Lucknow Sadar',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    country: 'India',
+    councillor: 'Ward Councillor · Ward 7',
+    center: [26.870, 80.908],
+    polygon: [
+      [26.855, 80.890],
+      [26.885, 80.892],
+      [26.888, 80.925],
+      [26.858, 80.922],
+      [26.855, 80.890]
+    ]
+  },
+  {
+    id: 'ward15',
+    name: 'Ward 15 (Indira Nagar)',
+    code: 'WARD-15',
+    village: 'Indira Nagar',
+    subDistrict: 'Lucknow Sadar',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    country: 'India',
+    councillor: 'Ward Councillor · Ward 15',
+    center: [26.890, 80.995],
+    polygon: [
+      [26.875, 80.972],
+      [26.905, 80.975],
+      [26.908, 81.015],
+      [26.878, 81.012],
+      [26.875, 80.972]
+    ]
+  },
+  {
+    id: 'ward30',
+    name: 'Ward 30 (Alambagh)',
+    code: 'WARD-30',
+    village: 'Alambagh',
+    subDistrict: 'Lucknow Sadar',
+    district: 'Lucknow',
+    state: 'Uttar Pradesh',
+    country: 'India',
+    councillor: 'Ward Councillor · Ward 30',
+    center: [26.818, 80.915],
+    polygon: [
+      [26.800, 80.895],
+      [26.835, 80.898],
+      [26.838, 80.935],
+      [26.805, 80.932],
+      [26.800, 80.895]
+    ]
+  },
+];
+const W = id => WARDS.find(w=>w.id===id) || WARDS[0];
+let CITIZEN_HOME_WARD = 'ward24'; // Default to Ward 24 as highlighted in requirements
+
+/* --- Pure JS Point-in-Polygon Ray Casting & Geographic Validation --- */
+function pointInPolygon(lat, lng, polygon) {
+  if (!polygon || polygon.length < 3) return false;
+  let inside = false;
+  const n = polygon.length;
+  let p1 = polygon[0];
+  for (let i = 1; i <= n; i++) {
+    const p2 = polygon[i % n];
+    if ((p1[0] < lat && p2[0] >= lat) || (p2[0] < lat && p1[0] >= lat)) {
+      if (lng <= (p2[1] - p1[1]) * (lat - p1[0]) / (p2[0] - p1[0]) + p1[1]) {
+        inside = !inside;
+      }
+    }
+    p1 = p2;
+  }
+  return inside;
+}
+
+function detectWardFromCoordinates(lat, lng) {
+  for (const w of WARDS) {
+    if (w.polygon && pointInPolygon(lat, lng, w.polygon)) {
+      return w;
+    }
+  }
+  return null;
+}
+
+function extractPointsFromGeometry(geom) {
+  if (!geom) return [];
+  const coords = geom.coordinates || [];
+  if (geom.type === 'Point') return [coords];
+  if (geom.type === 'LineString' || geom.type === 'Polyline') return coords;
+  if (geom.type === 'Polygon' || geom.type === 'Rectangle') {
+    return Array.isArray(coords[0]) && Array.isArray(coords[0][0]) ? coords[0] : coords;
+  }
+  return [];
+}
+
+function validateGeometryInsideWard(geom, ward) {
+  if (!ward || !ward.polygon) return { valid: false, reason: 'Ward boundary is missing' };
+  const pts = extractPointsFromGeometry(geom);
+  if (!pts.length) return { valid: false, reason: 'No coordinates drawn yet.' };
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (!pointInPolygon(p[0], p[1], ward.polygon)) {
+      return {
+        valid: false,
+        reason: `Point #${i + 1} (${p[0].toFixed(4)}, ${p[1].toFixed(4)}) falls outside your authorized ward (${ward.name}).`
+      };
+    }
+  }
+  return { valid: true };
+}
+
+function findAffectedWards(geom) {
+  const pts = extractPointsFromGeometry(geom);
+  const set = new Set();
+  for (const p of pts) {
+    const w = detectWardFromCoordinates(p[0], p[1]);
+    if (w) set.add(w.id);
+  }
+  return Array.from(set);
+}
+
+const GOV_ROLES = [
+  {id:'WARD_COUNCILLOR', label:'Ward Councillor', scope:'Ward 24 only', filter:c=>c.wardId==='ward24'},
+  {id:'VILLAGE_HEAD', label:'Village Head', scope:'Local region', filter:c=>['ward24','ward42','ward17'].includes(c.wardId)},
+  {id:'TEHSILDAR_SDM', label:'Tehsildar / SDM', scope:'Lucknow Sadar sub-division', filter:c=>W(c.wardId).subDistrict==='Lucknow Sadar'},
+  {id:'DM_COLLECTOR', label:'DM / Collector', scope:'Lucknow district', filter:c=>W(c.wardId).district==='Lucknow'},
+  {id:'CM', label:'Chief Minister', scope:'Uttar Pradesh state', filter:c=>W(c.wardId).state==='Uttar Pradesh'},
+  {id:'PM_CENTRAL_ADMIN', label:'Central Government', scope:'All of India', filter:c=>true},
+];
+
+/* --- Construction & Infrastructure Projects Store --- */
+let constructionProjects = [
+  {
+    id: 'PRJ-2401',
+    name: 'MG Road Footpath Tile Replacement',
+    projectType: 'LOCAL_WARD',
+    authorityId: 'councillor-ward24',
+    authorityRole: 'WARD_COUNCILLOR',
+    authorityWardId: 'ward24',
+    affectedWardIds: ['ward24'],
+    geometryType: 'Polygon',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [26.848, 80.940],
+        [26.852, 80.942],
+        [26.851, 80.947],
+        [26.847, 80.945],
+        [26.848, 80.940]
+      ]
+    },
+    startDate: '2026-10-12',
+    estimatedEndDate: '2026-10-26',
+    durationDays: 14,
+    officialSla: '14 days',
+    actualCompletionDate: null,
+    status: 'Under Construction',
+    description: 'Pedestrian footpath reconstruction and paver tile leveling along Hazratganj main market corridor.',
+    alternativeRoute: 'Pedestrians are requested to use the opposite arcade passage during paving hours.',
+    visibilityScope: 'WARD',
+    createdAt: daysAgo(5),
+  },
+  {
+    id: 'PRJ-4201',
+    name: 'Vipin Khand Drainage Culvert Upgradation',
+    projectType: 'LOCAL_WARD',
+    authorityId: 'councillor-ward42',
+    authorityRole: 'WARD_COUNCILLOR',
+    authorityWardId: 'ward42',
+    affectedWardIds: ['ward42'],
+    geometryType: 'Polygon',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [26.856, 80.985],
+        [26.861, 80.987],
+        [26.860, 80.993],
+        [26.855, 80.990],
+        [26.856, 80.985]
+      ]
+    },
+    startDate: '2026-10-05',
+    estimatedEndDate: '2026-11-05',
+    durationDays: 31,
+    officialSla: '30 days',
+    actualCompletionDate: null,
+    status: 'Delayed',
+    description: 'Replacement of damaged storm drainage conduit near Vipin Khand market.',
+    alternativeRoute: 'Lane 2 diverted via Manoj Pandey Chowk.',
+    visibilityScope: 'WARD',
+    createdAt: daysAgo(12),
+  },
+  {
+    id: 'PRJ-METRO-02',
+    name: 'Lucknow Metro East-West Corridor (Phase 2)',
+    projectType: 'MAJOR_INFRASTRUCTURE',
+    authorityId: 'gov-dm-lucknow',
+    authorityRole: 'DM_COLLECTOR',
+    authorityWardId: null,
+    affectedWardIds: ['ward7', 'ward24', 'ward42'],
+    geometryType: 'LineString',
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [26.868, 80.905],
+        [26.852, 80.942],
+        [26.858, 80.988]
+      ]
+    },
+    startDate: '2026-11-01',
+    estimatedEndDate: '2028-11-01',
+    durationDays: 731,
+    officialSla: '24 months',
+    actualCompletionDate: null,
+    status: 'Under Construction',
+    description: 'Major elevated mass-transit metro corridor connecting Old City (Chowk) through Hazratganj CBD to Gomti Nagar extension.',
+    alternativeRoute: 'Heavy transport and interstate buses diverted to Shaheed Path / Outer Ring Road corridor.',
+    visibilityScope: 'PUBLIC_CITY',
+    createdAt: daysAgo(20),
+  },
+];
+const ROLE = id => GOV_ROLES.find(r=>r.id===id);
+const ESCALATION_CHAIN = ['WARD_COUNCILLOR','VILLAGE_HEAD','TEHSILDAR_SDM','DM_COLLECTOR','CM','PM_CENTRAL_ADMIN'];
+
+function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d; }
+function fmtDate(d){ return d.toLocaleDateString('en-IN',{day:'2-digit', month:'short', year:'numeric'}); }
+
+let complaints = [
+  mkComplaint({id:'CMP24001', category:'infrastructure', title:'Broken Footpath Tiles on MG Marg', desc:'The footpath tiles near my house on Mahatma Gandhi Marg are broken, causing elderly pedestrians to trip.', wardId:'ward24', status:'progress', severity:3, upvotes:94, daysPending:4, communityVerified:true, govVerified:true, assigned:'Ward Councillor · Ward 24', createdDaysAgo:4}),
+  mkComplaint({id:'CMP11234', category:'roads', title:'Pothole on 5th Street', desc:'Large pothole causing vehicle damage and traffic issues near the main junction.', wardId:'ward42', status:'progress', severity:4, upvotes:127, daysPending:6, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:6}),
+  mkComplaint({id:'CMP11233', category:'streetlights', title:'Street Light Not Working', desc:'Three consecutive street lights have been non-functional for two weeks, making the lane unsafe at night.', wardId:'ward42', status:'progress', severity:3, upvotes:64, daysPending:9, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:9}),
+  mkComplaint({id:'CMP11232', category:'garbage', title:'Garbage Overflowing', desc:'Community bin has not been cleared in over a week and is overflowing onto the footpath.', wardId:'ward42', status:'verified', severity:2, upvotes:31, daysPending:3, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:3}),
+  mkComplaint({id:'CMP11229', category:'drainage', title:'Blocked Drain Near Market', desc:'Stagnant water from a blocked drain is creating a mosquito breeding risk outside the vegetable market.', wardId:'ward42', status:'escalated', severity:4, upvotes:203, daysPending:17, communityVerified:true, govVerified:true, assigned:'SDM', createdDaysAgo:17, escalated:true}),
+  mkComplaint({id:'CMP11221', category:'water', title:'Water Leakage on Service Road', desc:'Continuous leakage from an underground pipe is wasting water and damaging the road surface.', wardId:'ward17', status:'pending', severity:3, upvotes:18, daysPending:2, communityVerified:false, govVerified:false, assigned:'Ward Councillor', createdDaysAgo:2}),
+  mkComplaint({id:'CMP11219', category:'infrastructure', title:'Broken Footpath Tiles', desc:'Several footpath tiles are cracked and raised, creating a tripping hazard for pedestrians.', wardId:'ward17', status:'resolved', severity:2, upvotes:47, daysPending:0, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:22, resolvedDaysAgo:4}),
+  mkComplaint({id:'CMP11305', category:'crime', title:'Illegal Dumping at Riverbank', desc:'Unknown persons are dumping construction waste at the riverbank late at night, blocking the walking path.', wardId:'ward7', status:'verified', severity:4, upvotes:88, daysPending:5, communityVerified:true, govVerified:true, assigned:'Police / SDM', createdDaysAgo:5, isCrime:true}),
+  mkComplaint({id:'CMP11298', category:'electricity', title:'Exposed Live Wire Near School', desc:'A low-hanging live wire near the school gate poses a serious safety hazard to children.', wardId:'ward7', status:'escalated', severity:5, upvotes:341, daysPending:19, communityVerified:true, govVerified:true, assigned:'DM Office', createdDaysAgo:19, escalated:true}),
+];
+
+function mkComplaint(o){
+  const created = daysAgo(o.createdDaysAgo);
+  const timeline = [{title:'Reported', date:fmtDate(created)}];
+  if(o.communityVerified) timeline.push({title:'Community verification completed', date:fmtDate(daysAgo(o.createdDaysAgo-1))});
+  if(o.govVerified) timeline.push({title:'Government authority verified', date:fmtDate(daysAgo(o.createdDaysAgo-2))});
+  timeline.push({title:'Assigned to '+o.assigned, date:fmtDate(daysAgo(o.createdDaysAgo-2))});
+  if(o.status==='progress'||o.status==='resolved'||o.status==='escalated') timeline.push({title:'Work in progress', date:fmtDate(daysAgo(Math.max(o.createdDaysAgo-4,0)))});
+  if(o.escalated){
+    timeline.push({title:'14-day deadline passed', date:fmtDate(daysAgo(o.createdDaysAgo-14)), escalated:true});
+    timeline.push({title:'Escalated to '+o.assigned, date:fmtDate(daysAgo(o.createdDaysAgo-15)), escalated:true});
+  }
+  if(o.status==='resolved') timeline.push({title:'Resolved by '+o.assigned, date:fmtDate(daysAgo(o.resolvedDaysAgo||0)), done:true});
+  return {
+    id:o.id, category:o.category, title:o.title, description:o.desc, wardId:o.wardId,
+    status:o.status, severity:o.severity, upvotes:o.upvotes, voted:false,
+    daysPending:o.daysPending, communityVerified:o.communityVerified, govVerified:o.govVerified,
+    verificationStatus: o.govVerified?'VERIFIED':'UNVERIFIED',
+    assigned:o.assigned, createdAt:created, isCrime:!!o.isCrime, escalated:!!o.escalated,
+    timeline, comments: seedComments(o.id),
+    images:[], reporterAnonymous:true,
+  };
+}
+function seedComments(id){
+  const pool = [
+    {name:'Anonymous Citizen', text:'Yes, this is very much an issue. Almost caused an accident recently.', up:12, time:'2h ago'},
+    {name:'Anonymous Citizen', text:'Same here! Please fix this soon.', up:8, time:'5h ago'},
+    {name:'Anonymous Citizen', text:'I have also reported this at the ward office directly.', up:5, time:'1d ago'},
+  ];
+  return id==='CMP11234' ? pool : pool.slice(0,2);
+}
+function priorityScore(c){
+  const base = c.severity*10;
+  const community = Math.min(c.upvotes*0.6, 60);
+  const time = Math.min(c.daysPending*3, 45);
+  const verify = c.govVerified?20:(c.communityVerified?10:0);
+  const safety = c.isCrime?30:(c.category==='publicsafety'?18:0);
+  return Math.round(base+community+time+verify+safety);
+}
+function priorityLevel(score){ return score>=110?'HIGH':score>=70?'MEDIUM':'LOW'; }
+function rankInWard(c){
+  const sameWard = complaints.filter(x=>x.wardId===c.wardId).map(x=>({id:x.id, s:priorityScore(x)})).sort((a,b)=>b.s-a.s);
+  return sameWard.findIndex(x=>x.id===c.id)+1;
+}
+const STATUS_META = {
+  pending:{label:'Pending', badge:'badge-pending'},
+  verified:{label:'Verified', badge:'badge-verified'},
+  progress:{label:'In Progress', badge:'badge-progress'},
+  resolved:{label:'Resolved', badge:'badge-resolved'},
+  escalated:{label:'Escalated', badge:'badge-escalated'},
+};
+
+let notifications = [
+  {text:'Your complaint #CMP11234 has been verified.', time:'2h ago', read:false},
+  {text:'127 citizens have upvoted a problem in your area.', time:'6h ago', read:false},
+  {text:'Complaint #CMP11229 has been escalated due to the 14-day deadline.', time:'1d ago', read:true},
+  {text:'Your complaint #CMP11219 has been resolved.', time:'4d ago', read:true},
+];
+
+/* ============================= APP STATE ============================= */
+const state = {
+  theme:'light',
+  authMode:'citizen', // citizen | gov
+  screen:'splash',
+  history:[],
+  activeComplaintId:null,
+  activeGovRole:'WARD_COUNCILLOR',
+  homeTab:'mine',
+  govSort:'priority',
+  govTab:'complaints', // 'complaints' | 'construction'
+  communityTab:'list', // 'list' | 'map'
+  citizenWardId:'ward24',
+  councillorWardId:'ward24',
+  constructionFilter:'all',
+  selectedProjectId:null,
+  raise:{ category:null, description:'', severity:3, gpsState:'idle', gpsScenario:'valid', ward:'ward24', lat:26.850, lng:80.945, images:[] },
+  newProject:{
+    type: 'LOCAL_WARD',
+    name: '',
+    description: '',
+    startDate: new Date().toISOString().slice(0,10),
+    endDate: new Date(Date.now() + 14*86400000).toISOString().slice(0,10),
+    sla: '14 days',
+    status: 'Under Construction',
+    altRoute: '',
+    drawMode: 'polygon',
+    geometry: null,
+    drawnPoints: [],
+    isValid: false,
+    validationMsg: ''
+  }
+};
+
+function nav(screen, opts){
+  opts = opts||{};
+  if(!opts.replace) state.history.push(state.screen);
+  state.screen = screen;
+  render();
+}
+function back(){
+  const prev = state.history.pop();
+  state.screen = prev || 'home';
+  render();
+}
+function toast(msg){
+  const root = document.getElementById('screen-root');
+  const t = document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  root.appendChild(t);
+  setTimeout(()=>t.remove(), 2400);
+}
+
+/* persist theme via storage API if available */
+async function loadTheme(){
+  try{
+    const r = await window.storage.get('civicconnect-theme', false);
+    if(r && r.value){ state.theme = r.value; }
+  }catch(e){ /* no stored value yet, ignore */ }
+}
+async function setTheme(t){
+  state.theme = t;
+  document.getElementById('phone').setAttribute('data-theme', t);
+  try{ await window.storage.set('civicconnect-theme', t, false); }catch(e){}
+  render();
+}
+
+/* ============================= RENDER ROUTER ============================= */
+function render(){
+  document.getElementById('phone').setAttribute('data-theme', state.theme);
+  const root = document.getElementById('screen-root');
+  const nav_ = document.getElementById('bottomnav');
+  const citizenTabs = ['home','community','category','raise-complaint','notifications','profile'];
+  if(state.authMode==='citizen' && citizenTabs.includes(state.screen)){
+    nav_.classList.remove('hidden'); renderBottomNav();
+  } else {
+    nav_.classList.add('hidden');
+  }
+  const screens = {
+    splash: screenSplash, login: screenLogin, signup: screenSignup,
+    home: screenHome, category: screenCategory, 'raise-complaint': screenRaise,
+    'submit-success': screenSuccess, 'complaint-details': screenDetails,
+    community: screenCommunity, comments: screenComments, notifications: screenNotifications,
+    profile: screenProfile, 'gov-login': screenGovLogin, 'gov-dashboard': screenGovDashboard,
+    'gov-detail': screenGovDetail, escalated: screenEscalated, privacy: screenPrivacy,
+    'theme-select': screenThemeSelect,
+    'new-construction': screenNewConstruction,
+  };
+  root.innerHTML = (screens[state.screen]||screenHome)();
+
+  // If a project is selected for the modal overlay, render it on top
+  if(state.selectedProjectId){
+    const proj = constructionProjects.find(p=>p.id===state.selectedProjectId);
+    if(proj){
+      const modal = document.createElement('div');
+      modal.id = 'project-modal-root';
+      modal.innerHTML = renderProjectModalHTML(proj);
+      root.appendChild(modal);
+    }
+  }
+
+  window.scrollTo(0,0);
+  root.scrollTop = 0;
+
+  // Initialize interactive maps after DOM attachment
+  if(state.screen === 'raise-complaint') {
+    setTimeout(initRaiseMap, 80);
+  } else if(state.screen === 'community' && state.communityTab === 'map') {
+    setTimeout(initCivilianMap, 80);
+  } else if(state.screen === 'new-construction') {
+    setTimeout(initConstructionMap, 80);
+  }
+}
+
+function renderBottomNav(){
+  const items = [
+    {id:'home', icon:'🏠', label:'Home'},
+    {id:'community', icon:'💬', label:'Community'},
+    {id:'raise', icon:'+', label:'Raise', fab:true},
+    {id:'notifications', icon:'🔔', label:'Alerts'},
+    {id:'profile', icon:'👤', label:'Profile'},
+  ];
+  document.getElementById('bottomnav').innerHTML = items.map(it=>{
+    const active = (it.id==='home'&&state.screen==='home')||(it.id===state.screen);
+    if(it.fab){
+      return `<div class="nav-item" onclick="nav('category')"><div class="ni-fab">+</div></div>`;
+    }
+    return `<div class="nav-item ${active?'active':''}" onclick="nav('${it.id}')">
+      <div class="ni-icon">${it.icon}</div><div class="nav-label">${it.label}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ============================= SCREENS ============================= */
+function screenSplash(){
+  setTimeout(()=>{ if(state.screen==='splash') nav('login',{replace:true}); }, 1400);
+  return `
+  <div class="screen center" style="padding-top:280px;">
+    <div style="width:88px;height:88px;border-radius:26px;background:var(--accent-grad);margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 16px 34px rgba(90,79,224,.4);">🏛️</div>
+    <h1 class="display" style="font-size:26px;margin:0;">CivicConnect</h1>
+    <p class="muted" style="font-size:13.5px;margin-top:6px;">Your Voice. Your Community. Your Government.</p>
+    <div class="spinner-ring" style="margin:34px auto 0;"></div>
+  </div>`;
+}
+
+function screenLogin(){
+  return `
+  <div class="screen no-pad-bottom">
+    <div class="center" style="margin:28px 0 22px;">
+      <div style="width:60px;height:60px;border-radius:18px;background:var(--accent-grad);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:26px;">🏛️</div>
+      <h2 class="display" style="margin:0;font-size:21px;">Welcome to CivicConnect</h2>
+      <p class="muted" style="font-size:13px;margin-top:4px;">Sign in to report and track civic issues</p>
+    </div>
+    <div class="glass-card">
+      <button class="btn btn-ghost full gap10" onclick="toast('Google sign-in would open the OAuth consent screen here')">
+        <span>🔵</span> Continue with Google
+      </button>
+      <div class="row" style="margin:16px 0;color:var(--text-3);font-size:11.5px;font-weight:700;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="padding:0 10px;">OR</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      <div class="field"><label>Username or Email</label><input placeholder="you@example.com" value="citizen_demo"></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="••••••••" value="••••••••"></div>
+      <div class="row between" style="margin-bottom:16px;">
+        <span></span>
+        <span class="link" style="font-size:12.5px;" onclick="toast('Password reset link sent (demo)')">Forgot password?</span>
+      </div>
+      <button class="btn btn-primary full" onclick="loginAsCitizen()">Log In</button>
+      <p class="center" style="font-size:12.5px;margin:14px 0 0;">Don't have an account? <span class="link" onclick="nav('signup')">Create one</span></p>
+    </div>
+    <div class="center" style="margin-top:18px;">
+      <span class="link" style="font-size:12.5px;" onclick="nav('gov-login')">🏛️ Government Official Login →</span>
+    </div>
+  </div>`;
+}
+function loginAsCitizen(){ state.authMode='citizen'; state.history=[]; nav('home',{replace:true}); }
+
+function screenSignup(){
+  return `
+  <div class="screen no-pad-bottom">
+    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Create your account</h2></div>
+    <div class="glass-card">
+      <div class="field"><label>Full Name</label><input placeholder="Your name"></div>
+      <div class="field"><label>Username</label><input placeholder="username"></div>
+      <div class="field"><label>Email</label><input placeholder="you@example.com"></div>
+      <div class="field"><label>Phone Number</label><input placeholder="+91 98765 43210"></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+      <div class="field"><label>Confirm Password</label><input type="password" placeholder="••••••••"></div>
+      <p style="font-size:11.5px;color:var(--text-3);line-height:1.5;margin:2px 0 16px;">🔒 Your identity is stored securely and is <b>never</b> shown to government officials. They will only see "Anonymous Citizen".</p>
+      <button class="btn btn-primary full" onclick="loginAsCitizen()">Create Account</button>
+      <button class="btn btn-ghost full" style="margin-top:10px;" onclick="toast('Google sign-up would open the OAuth consent screen here')">Sign up with Google</button>
+    </div>
+  </div>`;
+}
+
+function screenGovLogin(){
+  return `
+  <div class="screen no-pad-bottom">
+    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="nav('login')">←</div><h2 class="display" style="margin:0;font-size:18px;">Government Official Login</h2></div>
+    <div class="glass-card">
+      <p class="muted" style="font-size:12.5px;line-height:1.5;margin-top:0;">Government accounts are issued by the administration and cannot be self-registered. Select a demo role to preview that dashboard.</p>
+      <div class="field"><label>Official ID</label><input value="GOV-DEMO-2026" disabled></div>
+      <div class="field"><label>Password</label><input type="password" value="••••••••" disabled></div>
+      <div class="field">
+        <label>Demo Role (development only)</label>
+        <select id="gov-role-select">
+          ${GOV_ROLES.map(r=>`<option value="${r.id}">${r.label} — ${r.scope}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn btn-primary full" onclick="loginAsGov()">Log In as Official</button>
+    </div>
+    <div class="glass-card tight" style="margin-top:14px;background:rgba(224,138,30,.1);border-color:rgba(224,138,30,.3);">
+      <p style="font-size:11.5px;color:var(--warn);margin:0;line-height:1.5;"><b>Demo mode:</b> in production, officials authenticate with government-issued credentials only — this role switcher exists solely to preview role-based access for this prototype.</p>
+    </div>
+  </div>`;
+}
+function loginAsGov(){
+  const sel = document.getElementById('gov-role-select');
+  state.activeGovRole = sel ? sel.value : 'WARD_COUNCILLOR';
+  state.authMode='gov'; state.history=[];
+  nav('gov-dashboard',{replace:true});
+}
+
+function screenHome(){
+  const mine = complaints.filter(c=>c.wardId===CITIZEN_HOME_WARD);
+  const list = state.homeTab==='mine' ? mine : complaints;
+  const impactPct = 75;
+  return `
+  <div class="screen">
+    <div class="row between" style="margin:8px 0 18px;">
+      <div class="row gap10"><div class="icon-btn">☰</div><h2 class="display" style="margin:0;font-size:19px;">CivicConnect</h2></div>
+      <div class="avatar" onclick="nav('profile')" style="cursor:pointer;">CU</div>
+    </div>
+    <h3 style="margin:0 0 2px;font-size:19px;">Welcome back!</h3>
+    <p class="muted" style="margin:0 0 16px;font-size:13.5px;">Here are the concerns you've raised.</p>
+
+    <div class="seg" style="margin-bottom:16px;">
+      <div class="seg-item ${state.homeTab==='mine'?'active':''}" onclick="state.homeTab='mine';render()">My Complaints</div>
+      <div class="seg-item ${state.homeTab==='community'?'active':''}" onclick="state.homeTab='community';render()">Community</div>
+    </div>
+
+    ${list.length? list.map(complaintCardHTML).join('') : emptyStateHTML()}
+
+    <div class="glass-card" style="margin-top:8px;">
+      <div class="row between">
+        <div>
+          <div style="font-weight:800;font-size:14px;">Your Impact</div>
+          <div class="muted" style="font-size:12px;margin-top:2px;max-width:170px;">Your voice is helping improve your community.</div>
+        </div>
+        <div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--success) ${impactPct*3.6}deg, var(--chip) 0deg);display:flex;align-items:center;justify-content:center;">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--glass-hi);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">${impactPct}%</div>
+        </div>
+      </div>
+      <p class="muted" style="font-size:11.5px;margin:10px 0 0;">of complaints in your area have received government action &nbsp;·&nbsp; <span style="color:var(--success);font-weight:800;">↑ 12% this month</span></p>
+    </div>
+  </div>`;
+}
+
+function complaintCardHTML(c){
+  const cat = CAT(c.category);
+  const meta = STATUS_META[c.status];
+  const topTag = priorityScore(c)>=110 ? `<span class="badge badge-pushed">Most Upvoted</span>` : '';
+  return `
+  <div class="complaint-card" onclick="openComplaint('${c.id}')">
+    <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};">${cat.icon}</div>
+    <div style="flex:1;min-width:0;">
+      <div class="row between" style="gap:8px;">
+        <div class="cc-title">${c.title}</div>
+      </div>
+      <div class="cc-meta">${fmtDate(c.createdAt)} · #${c.id}</div>
+      <div class="row gap6" style="margin-top:8px;flex-wrap:wrap;">
+        ${topTag}
+        <span class="badge ${meta.badge}">${meta.label}</span>
+        ${c.escalated?'<span class="badge badge-escalated">⚠ Escalated</span>':''}
+      </div>
+    </div>
+    <div class="muted" style="font-size:15px;">›</div>
+  </div>`;
+}
+function emptyStateHTML(){
+  return `
+  <div class="empty glass-card">
+    <div class="ee">📭</div>
+    <div style="font-weight:800;font-size:15px;">No complaints yet.</div>
+    <p class="muted" style="font-size:13px;margin:6px 0 16px;">Your first report could help improve your community.</p>
+    <button class="btn btn-primary" onclick="nav('category')">Raise a Complaint</button>
+  </div>`;
+}
+function openComplaint(id){ state.activeComplaintId=id; nav('complaint-details'); }
+
+function screenCategory(){
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 4px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Raise a Complaint</h2></div>
+    <p class="muted" style="font-size:13px;margin:0 0 16px;">Choose the category that best matches the issue.</p>
+    ${CATEGORIES.map(cat=>`
+      <div class="complaint-card" onclick="startRaise('${cat.id}')">
+        <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};">${cat.icon}</div>
+        <div style="flex:1;">
+          <div class="cc-title">${cat.label}</div>
+          <div class="cc-meta">${cat.desc}</div>
+        </div>
+        <div class="muted" style="font-size:15px;">›</div>
+      </div>`).join('')}
+  </div>`;
+}
+function startRaise(catId){
+  const defW = W(state.citizenWardId || 'ward24');
+  state.raise = {
+    category: catId,
+    description: '',
+    severity: 3,
+    gpsState: 'valid',
+    gpsScenario: 'valid',
+    ward: defW.id,
+    lat: defW.center[0],
+    lng: defW.center[1],
+    images: []
+  };
+  nav('raise-complaint');
+}
+
+function screenRaise(){
+  const cat = CAT(state.raise.category);
+  const geoLock = cat.geoLock;
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Raise a Complaint</h2></div>
+    <div class="glass-card">
+      <div class="row gap10" style="margin-bottom:14px;">
+        <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};">${cat.icon}</div>
+        <div><div style="font-weight:800;font-size:14.5px;">${cat.label}</div><div class="muted" style="font-size:11.5px;">${geoLock?'Ward verification required':'No ward restriction · identity stays anonymous'}</div></div>
+      </div>
+
+      <div class="field">
+        <label>📍 Location</label>
+        ${renderGpsBox(geoLock)}
+      </div>
+
+      <div class="field"><label>Incident Date</label><input type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="field"><label>Description</label><textarea id="desc-input" placeholder="Describe the issue in detail...">${state.raise.description}</textarea></div>
+
+      <div class="field">
+        <label>Severity</label>
+        <div class="row gap6">
+          ${[1,2,3,4,5].map(n=>`<div class="chip ${state.raise.severity===n?'active':''}" style="flex:1;text-align:center;" onclick="setSeverity(${n})">${n}</div>`).join('')}
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Add Photos</label>
+        <div class="row gap8">
+          ${state.raise.images.map((img,i)=>`<img class="thumb" src="${img.url}">`).join('')}
+          ${state.raise.images.length<3?`<label class="thumb-add">+<input type="file" accept="image/*" class="hidden" onchange="handlePhoto(event)"></label>`:''}
+        </div>
+        <p style="font-size:10.5px;color:var(--text-3);margin:8px 0 0;">EXIF metadata is stripped from photos before upload to protect your location privacy.</p>
+      </div>
+
+      ${cat.id==='crime' ? `<div class="glass-card tight" style="background:rgba(63,123,240,.08);border-color:rgba(63,123,240,.3);margin-bottom:14px;"><p style="font-size:11.5px;color:var(--info);margin:0;line-height:1.5;">🔒 Your identity will remain anonymous to government officials. Only the incident location is recorded.</p></div>` : ''}
+
+      <button class="btn btn-primary full" onclick="submitComplaint()" ${geoLock && state.raise.gpsState!=='valid' ? 'style="opacity:.5;pointer-events:none;"' : ''}>Submit Complaint</button>
+    </div>
+  </div>`;
+}
+function renderGpsBox(geoLock){
+  const r = state.raise || {};
+  if(typeof r.lat !== 'number' || typeof r.lng !== 'number'){
+    const dw = W(state.citizenWardId || 'ward24');
+    r.lat = dw.center[0];
+    r.lng = dw.center[1];
+    r.ward = dw.id;
+  }
+  const detected = detectWardFromCoordinates(r.lat, r.lng) || W(r.ward || state.citizenWardId || 'ward24');
+  r.ward = detected.id;
+  r.ward = detected.id;
+
+  const isHomeWard = (detected.id === state.citizenWardId);
+  const isValid = (!geoLock) || (r.gpsScenario !== 'outside' && isHomeWard);
+
+  return `
+  <div class="gps-box ${isValid ? 'gps-ok' : 'gps-bad'}" style="padding:12px 14px;">
+    <div class="row between" style="margin-bottom:6px;">
+      <div class="row gap8">
+        <span style="font-size:16px;">${isValid ? '📍' : '⚠️'}</span>
+        <div>
+          <b style="font-size:13.5px;color:${isValid ? 'var(--success)' : 'var(--danger)'};">
+            ${isValid ? 'Automatically Detected Ward' : 'Jurisdiction Restriction'}
+          </b>
+          <div class="muted" style="font-size:11.5px;">Resolved from GPS coordinates (${r.lat.toFixed(4)}° N, ${r.lng.toFixed(4)}° E)</div>
+        </div>
+      </div>
+      <span class="badge ${isValid ? 'badge-verified' : 'badge-escalated'}">${detected.name}</span>
+    </div>
+
+    <div style="background:var(--glass);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:12px;line-height:1.5;">
+      <div><b>Detected Ward:</b> <span style="color:var(--accent);font-weight:700;">${detected.name}</span></div>
+      <div class="muted" style="font-size:11px;">Administrative Chain: India → Uttar Pradesh → Lucknow → ${detected.subDistrict} → ${detected.village}</div>
+    </div>
+
+    <!-- Mini Interactive Map for Pinning/Viewing Complaint Ward -->
+    <div style="font-size:11px;color:var(--text-2);margin:6px 0 4px;font-weight:600;">Drag pin or tap map to adjust location:</div>
+    <div id="raise-map" class="map-wrap" style="height:170px;margin:4px 0 10px;"></div>
+
+    <div class="row gap6" style="margin-bottom:8px;flex-wrap:wrap;">
+      <div class="map-btn ${detected.id==='ward24'?'active':''}" onclick="setRaiseCoords(26.850, 80.945)">📍 Ward 24 (Hazratganj)</div>
+      <div class="map-btn ${detected.id==='ward42'?'active':''}" onclick="setRaiseCoords(26.858, 80.990)">📍 Ward 42 (Gomti Nagar)</div>
+      <div class="map-btn ${detected.id==='ward17'?'active':''}" onclick="setRaiseCoords(26.890, 80.948)">📍 Ward 17 (Aliganj)</div>
+      <div class="map-btn" onclick="detectLiveGPS()">🛰️ Live GPS</div>
+    </div>
+
+    ${!isValid ? `
+      <p style="font-size:11.5px;color:var(--danger);margin:6px 0 0;line-height:1.4;">
+        This is a local civic complaint. You are registered in <b>${W(state.citizenWardId).name}</b>, but this complaint is located in <b>${detected.name}</b>.
+        <br><span class="link" onclick="state.citizenWardId='${detected.id}';render();">Switch active ward to ${detected.name} for demo</span>
+      </p>
+    ` : `
+      <p style="font-size:11px;color:var(--success);margin:4px 0 0;">
+        ✓ Complaint will be automatically assigned to <b>${detected.name}</b> and routed to ${detected.councillor}.
+      </p>
+    `}
+  </div>`;
+}
+
+function setRaiseCoords(lat, lng){
+  state.raise.lat = lat;
+  state.raise.lng = lng;
+  const d = detectWardFromCoordinates(lat, lng);
+  if(d) state.raise.ward = d.id;
+  render();
+}
+
+function detectLiveGPS(){
+  if(navigator.geolocation){
+    toast('Accessing device GPS…');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setRaiseCoords(pos.coords.latitude, pos.coords.longitude);
+        toast('Location updated from device GPS!');
+      },
+      err => {
+        toast('Using simulated Ward 24 GPS location.');
+        setRaiseCoords(26.850, 80.945);
+      },
+      { timeout: 4000 }
+    );
+  } else {
+    setRaiseCoords(26.850, 80.945);
+  }
+}
+function setSeverity(n){ state.raise.severity=n; render(); }
+function detectLocation(){
+  state.raise.gpsState='detecting'; render();
+  setTimeout(()=>{
+    const s = state.raise.gpsScenario;
+    state.raise.gpsState = s==='denied' ? 'denied' : s==='outside' ? 'outside' : 'valid';
+    if(state.raise.gpsState==='valid') state.raise.ward = CITIZEN_HOME_WARD;
+    render();
+  }, 1100);
+}
+function handlePhoto(e){
+  const file = e.target.files[0]; if(!file) return;
+  const url = URL.createObjectURL(file);
+  state.raise.images.push({url, file}); render();
+}
+async function submitComplaint(){
+  const desc = document.getElementById('desc-input');
+  const cat = CAT(state.raise.category);
+  const descriptionText = (desc&&desc.value)||'No description provided.';
+
+  // Build a human-readable location string from the ward the local demo already resolved via GPS.
+  let locationText = 'Anonymous / unspecified location';
+  if(cat.geoLock && state.raise.ward){
+    const w = W(state.raise.ward);
+    if(w) locationText = `${w.village}, ${w.name}, ${w.district}, ${w.state}`;
+  }
+
+  // Try the real backend first. This never blocks the existing local-demo flow below —
+  // if the network call fails for any reason, the app still behaves exactly as it did before.
+  let realId = null;
+  let translatedText = null;
+  let detectedLanguage = null;
+  try {
+    const formData = new FormData();
+    formData.append('category', cat.label);
+    formData.append('location', locationText);
+    formData.append('description', descriptionText);
+    formData.append('target_language', 'en');
+    formData.append('latitude', state.raise.lat || 26.850);
+    formData.append('longitude', state.raise.lng || 80.945);
+    formData.append('ward_id', state.raise.ward || 'ward24');
+    state.raise.images.forEach(img => { if(img.file) formData.append('photos', img.file); });
+
+    const res = await fetch(`${API_BASE}/complaints`, { method: 'POST', body: formData });
+    if(res.ok){
+      const data = await res.json();
+      realId = data.id ? data.id.replace('#','') : null;
+      // Only worth showing a translation if it actually differs from the original —
+      // otherwise it's just noise (e.g. the complaint was already in English).
+      if(data.translated_text && data.translated_text.trim() !== descriptionText.trim()){
+        translatedText = data.translated_text;
+      }
+      if(data.detected_language && data.detected_language !== 'unknown'){
+        detectedLanguage = data.detected_language;
+      }
+    }
+  } catch(err) {
+    // Backend unreachable — fall through to the local-only simulated ID below.
+    console.warn('Backend submit failed, continuing with local simulation only:', err);
+  }
+
+  const id = realId || ('CMP'+Math.floor(10000+Math.random()*89999));
+  const targetWardId = state.raise.ward || state.citizenWardId || 'ward24';
+  const targetWard = W(targetWardId);
+
+  const c = mkComplaint({
+    id, category:cat.id, title:cat.label+' Report', desc: descriptionText,
+    wardId: targetWardId, status:'pending', severity:state.raise.severity,
+    upvotes:0, daysPending:0, communityVerified:false, govVerified:false,
+    assigned: targetWard ? targetWard.councillor : 'Ward Councillor',
+    createdDaysAgo:0, isCrime:cat.id==='crime',
+  });
+  c.latitude = state.raise.lat || targetWard.center[0];
+  c.longitude = state.raise.lng || targetWard.center[1];
+  c.wardName = targetWard.name;
+  c.translatedText = translatedText;
+  c.detectedLanguage = detectedLanguage;
+  c.images = state.raise.images;
+  complaints.unshift(c);
+  state.lastSubmittedId = id;
+  notifications.unshift({text:`Your concern has been forwarded to the appropriate authority. (#${id})`, time:'just now', read:false});
+  nav('submit-success',{replace:true});
+}
+
+function screenSuccess(){
+  const id = state.lastSubmittedId || 'CMP00000';
+  return `
+  <div class="screen center" style="padding-top:120px;">
+    <div style="width:90px;height:90px;border-radius:50%;background:rgba(18,164,84,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;" class="pulse-ok">
+      <span style="font-size:42px;color:var(--success);">✓</span>
+    </div>
+    <h2 class="display" style="margin:0 0 6px;">Complaint Registered</h2>
+    <p class="muted" style="font-size:14px;">Complaint ID: <b style="color:var(--text);">#${id}</b></p>
+    <p class="muted" style="font-size:13px;max-width:280px;margin:14px auto 26px;line-height:1.6;">Your concern has been forwarded to the appropriate authority. You'll be notified as it progresses.</p>
+    <button class="btn btn-primary full" onclick="openComplaint('${id}')">Track This Complaint</button>
+    <button class="btn btn-ghost full" style="margin-top:10px;" onclick="nav('home',{replace:true})">Back to Home</button>
+  </div>`;
+}
+
+function screenDetails(){
+  const c = complaints.find(x=>x.id===state.activeComplaintId);
+  if(!c) return screenHome();
+  const cat = CAT(c.category);
+  const meta = STATUS_META[c.status];
+  const score = priorityScore(c);
+  const level = priorityLevel(score);
+  const w = W(c.wardId);
+  return `
+  <div class="screen">
+    <div class="row between" style="margin:20px 0 16px;">
+      <div class="row gap10"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:17px;">Complaint Details</h2></div>
+      <span class="badge ${meta.badge}">${meta.label}</span>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:12px;">
+      <div class="row gap10">
+        <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};">${cat.icon}</div>
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:16px;">${c.title}</div>
+          <div class="muted" style="font-size:12px;">#${c.id} · ${fmtDate(c.createdAt)}</div>
+        </div>
+      </div>
+      <p style="font-size:13.5px;line-height:1.6;margin:14px 0;">${c.description}</p>
+      ${c.translatedText ? `
+      <div class="glass-card tight" style="background:rgba(63,123,240,.08);border-color:rgba(63,123,240,.3);margin:-4px 0 14px;">
+        <p style="font-size:10.5px;font-weight:700;color:var(--info);margin:0 0 4px;text-transform:uppercase;letter-spacing:.03em;">
+          🌐 Translated${c.detectedLanguage ? ` from ${c.detectedLanguage}` : ''} to English
+        </p>
+        <p style="font-size:13px;line-height:1.6;margin:0;color:var(--text);">${c.translatedText}</p>
+      </div>` : ''}
+      ${c.images.length?`<div class="row gap8" style="margin-bottom:10px;">${c.images.map(img=>`<img class="thumb" src="${img.url}">`).join('')}</div>`:''}
+      <div class="row between" style="font-size:12px;color:var(--text-2);margin-top:6px;">
+        <span>📍 ${w.village}, ${w.name}</span><span>${w.district}, ${w.state}</span>
+      </div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:12px;">
+      <div class="row between">
+        <div class="upvote-btn ${c.voted?'voted':''}" onclick="toggleVote('${c.id}')">
+          <div class="uv-arrow">▲</div><div class="uv-count">${c.upvotes}</div>
+        </div>
+        <div style="flex:1;padding-left:14px;">
+          <div class="row gap8"><span class="priority-tag pr-${level.toLowerCase()}">${level} PRIORITY</span><span class="muted" style="font-size:11.5px;">Ranked #${rankInWard(c)} in ${w.name}</span></div>
+          <div class="muted" style="font-size:11px;margin-top:6px;">${c.upvotes} citizens support this issue</div>
+        </div>
+      </div>
+      <div class="link" style="font-size:12px;margin-top:10px;" onclick="toggleWhy(this)">Why is this prioritized? ▾</div>
+      <div class="why-panel hidden" style="margin-top:10px;font-size:11.5px;color:var(--text-2);line-height:1.9;">
+        Base severity: ${c.severity}/5 · Community support: ${c.upvotes} upvotes · Time pending: ${c.daysPending} days<br>
+        Verification: ${c.govVerified?'Government verified':(c.communityVerified?'Community verified':'Unverified')} · Safety impact: ${c.isCrime?'High (crime report)':'Standard'}<br>
+        <b>Priority score: ${score}</b>
+      </div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:12px;">
+      <div class="row between" style="margin-bottom:14px;">
+        <b style="font-size:14px;">Verification</b>
+        ${verifyPillHTML(c, 'details')}
+      </div>
+      <div class="muted" style="font-size:11.5px;">Current authority: <b style="color:var(--text);">${c.assigned}</b></div>
+    </div>
+
+    <div class="glass-card">
+      <b style="font-size:14px;">Timeline</b>
+      <div style="margin-top:14px;">
+        ${c.timeline.map((t,i)=>`
+          <div class="tl-item">
+            <div class="tl-dot-col"><div class="tl-dot ${t.done?'done':''} ${t.escalated?'escalated':''}"></div>${i<c.timeline.length-1?'<div class="tl-line"></div>':''}</div>
+            <div class="tl-body"><div class="tl-title" style="${t.escalated?'color:var(--danger);':''}">${t.escalated?'⚠ ':''}${t.title}</div><div class="tl-date">${t.date}</div></div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <button class="btn btn-ghost full" style="margin-top:14px;" onclick="nav('comments')">💬 View Community Discussion (${c.comments.length})</button>
+  </div>`;
+}
+function toggleWhy(el){ const p = el.nextElementSibling; p.classList.toggle('hidden'); }
+function toggleVote(id){
+  const c = complaints.find(x=>x.id===id);
+  if(c.voted){ c.voted=false; c.upvotes--; } else { c.voted=true; c.upvotes++; }
+  render();
+}
+
+function verifyPillHTML(c, ctx){
+  const vs = c._vstate || (c.verificationStatus==='VERIFIED'?'verified':c.verificationStatus==='REJECTED'?'rejected':'unverified');
+  if(vs==='verifying'){
+    return `<div class="verify-pill verifying"><div class="spinner-ring"></div></div>`;
+  }
+  if(vs==='verified'){
+    return `<div class="verify-pill verified" onclick="event.stopPropagation()"><span>✓</span><span class="vp-text">Verified</span></div>`;
+  }
+  if(vs==='rejected'){
+    return `<div class="verify-pill rejected" onclick="retryVerify('${c.id}','${ctx}')"><span>!</span><span class="vp-text">Verification Failed</span></div>`;
+  }
+  return `<div class="verify-pill unverified" onclick="startVerify('${c.id}','${ctx}')"><span>✓</span><span class="vp-text">Verification</span></div>`;
+}
+function startVerify(id, ctx){
+  const c = complaints.find(x=>x.id===id);
+  c._vstate='verifying'; render();
+  setTimeout(()=>{
+    const success = Math.random()>0.12;
+    c._vstate = success?'verified':'rejected';
+    if(success){ c.verificationStatus='VERIFIED'; c.govVerified=true; }
+    render();
+    if(success) toast('Complaint verified successfully');
+    else toast('Verification failed — you can retry');
+  }, 1600);
+}
+function retryVerify(id, ctx){ startVerify(id, ctx); }
+
+function screenComments(){
+  const c = complaints.find(x=>x.id===state.activeComplaintId);
+  if(!c) return screenHome();
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 4px;"><div class="icon-btn" onclick="back()">←</div><div><div style="font-weight:800;font-size:15px;">${c.title}</div><div class="muted" style="font-size:11.5px;">Community Discussion</div></div></div>
+    <div class="row gap8" style="margin:14px 0 18px;">
+      <input id="comment-input" placeholder="Write a comment..." style="flex:1;">
+      <div class="icon-btn" style="background:var(--accent-grad);color:#fff;" onclick="postComment('${c.id}')">➤</div>
+    </div>
+    ${c.comments.map(cm=>`
+      <div class="glass-card tight" style="margin-bottom:10px;">
+        <div class="row gap10"><div class="avatar" style="width:30px;height:30px;font-size:11px;background:var(--chip);color:var(--text-2);">👤</div>
+          <div style="flex:1;">
+            <div class="row between"><b style="font-size:13px;">${cm.name}</b><span class="muted" style="font-size:10.5px;">${cm.time}</span></div>
+            <p style="font-size:13px;margin:4px 0 6px;line-height:1.5;">${cm.text}</p>
+            <div class="row gap12" style="font-size:11.5px;color:var(--text-3);"><span>👍 ${cm.up}</span><span class="link">Reply</span></div>
+          </div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+function postComment(id){
+  const c = complaints.find(x=>x.id===id);
+  const inp = document.getElementById('comment-input');
+  if(!inp.value.trim()) return;
+  c.comments.unshift({name:'Anonymous Citizen', text:inp.value.trim(), up:0, time:'just now'});
+  render();
+}
+
+function screenCommunity(){
+  const list = [...complaints].sort((a,b)=>priorityScore(b)-priorityScore(a));
+  const activeWard = W(state.citizenWardId);
+
+  // Filter construction projects based on civilian visibility rules:
+  // 1. Major Infrastructure: Visible to everyone citywide!
+  // 2. Local Ward Construction: Visible ONLY if matching civilian's ward!
+  const visibleProjects = constructionProjects.filter(p => {
+    if(p.status === 'Completed') return false; // Active construction layer hides completed obstructions
+    if(p.projectType === 'MAJOR_INFRASTRUCTURE') return true;
+    return p.authorityWardId === state.citizenWardId;
+  });
+
+  return `
+  <div class="screen">
+    <div class="row between" style="margin:16px 0 6px;">
+      <h2 class="display" style="margin:0;font-size:20px;">Community & Civic Map</h2>
+      <div class="chip" style="font-size:11px;font-weight:700;" onclick="switchCitizenWardPrompt()">
+        📍 ${activeWard.name} ▾
+      </div>
+    </div>
+
+    <!-- View Switcher -->
+    <div class="seg" style="margin:10px 0 14px;">
+      <div class="seg-item ${state.communityTab==='list'?'active':''}" onclick="state.communityTab='list';render()">📋 Complaints (${list.length})</div>
+      <div class="seg-item ${state.communityTab==='map'?'active':''}" onclick="state.communityTab='map';render()">🗺️ Civic & Construction Map (${visibleProjects.length})</div>
+    </div>
+
+    ${state.communityTab === 'list' ? `
+      <p class="muted" style="font-size:13px;margin:0 0 14px;">Issues raised across your ward and nearby areas.</p>
+      ${list.map(c=>{
+        const cat = CAT(c.category); const score=priorityScore(c); const level=priorityLevel(score); const w=W(c.wardId);
+        return `<div class="glass-card tight" style="margin-bottom:10px;cursor:pointer;" onclick="openComplaint('${c.id}')">
+          <div class="row gap10">
+            <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};width:40px;height:40px;font-size:17px;">${cat.icon}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="row between"><b style="font-size:13.5px;">${c.title}</b></div>
+              <div class="muted" style="font-size:11px;">${w.name} · ${w.village}</div>
+              <div class="row gap6" style="margin-top:8px;flex-wrap:wrap;">
+                <span class="priority-tag pr-${level.toLowerCase()}">${level==='HIGH'?'🔥 ':''}${level}</span>
+                <span class="badge ${STATUS_META[c.status].badge}">${STATUS_META[c.status].label}</span>
+              </div>
+            </div>
+            <div class="upvote-btn ${c.voted?'voted':''}" onclick="event.stopPropagation();toggleVote('${c.id}')"><div class="uv-arrow">▲</div><div class="uv-count">${c.upvotes}</div></div>
+          </div>
+        </div>`;
+      }).join('')}
+    ` : `
+      <!-- Civilian Satellite / Street Map with Active Construction -->
+      <div class="geo-banner geo-banner-info" style="margin-top:0;">
+        <span>ℹ️</span>
+        <div>
+          <b>Construction & Infrastructure Layer</b><br>
+          Local ward projects are restricted to <b>${activeWard.name}</b>. Major government infrastructure projects are visible citywide.
+        </div>
+      </div>
+
+      <div class="row between" style="margin-bottom:8px;">
+        <div class="row gap6" style="overflow-x:auto;">
+          ${['all','active','delayed'].map(f=>`
+            <div class="chip ${state.constructionFilter===f?'active':''}" style="font-size:11px;" onclick="state.constructionFilter='${f}';render()">${f.toUpperCase()}</div>
+          `).join('')}
+        </div>
+        <div class="chip" id="civ-map-tile-btn" style="font-size:11px;" onclick="toggleCivMapTile()">🛰️ Satellite</div>
+      </div>
+
+      <div id="civilian-map" class="map-wrap map-wrap-lg"></div>
+
+      <!-- Map Legend -->
+      <div class="glass-card tight" style="margin-bottom:12px;padding:10px 14px;">
+        <div style="font-size:11px;font-weight:800;color:var(--text-2);margin-bottom:6px;">MAP OVERLAY LEGEND</div>
+        <div class="row between" style="font-size:11.5px;gap:8px;flex-wrap:wrap;">
+          <div class="row gap6"><span style="width:12px;height:12px;background:#e08a1e;border-radius:3px;display:inline-block;"></span> <span>Local Ward (${activeWard.name})</span></div>
+          <div class="row gap6"><span style="width:12px;height:12px;background:#3f7bf0;border-radius:3px;display:inline-block;"></span> <span>Major Public Infrastructure</span></div>
+          <div class="row gap6"><span style="width:12px;height:12px;border:2px solid #e0435a;background:rgba(224,67,90,.3);border-radius:3px;display:inline-block;"></span> <span>Delayed Project</span></div>
+        </div>
+      </div>
+
+      <h4 style="margin:14px 0 8px;font-size:14px;">Active Construction in Scope (${visibleProjects.length})</h4>
+      ${visibleProjects.map(p => renderProjectCardHTML(p)).join('')}
+    `}
+  </div>`;
+}
+
+function switchCitizenWardPrompt(){
+  const otherWards = WARDS.map(w=>w.id);
+  const next = otherWards[(otherWards.indexOf(state.citizenWardId)+1) % otherWards.length];
+  state.citizenWardId = next;
+  toast(`Switched home ward to ${W(next).name}`);
+  render();
+}
+
+function screenNotifications(){
+  return `
+  <div class="screen">
+    <h2 class="display" style="margin:16px 0 16px;font-size:20px;">Notifications</h2>
+    ${notifications.length? notifications.map(n=>`
+      <div class="glass-card tight" style="margin-bottom:10px;${n.read?'opacity:.65;':''}">
+        <div class="row gap10">
+          <div style="font-size:18px;">${n.read?'✓':'🔔'}</div>
+          <div style="flex:1;"><p style="font-size:13px;margin:0;line-height:1.5;">${n.text}</p><span class="muted" style="font-size:11px;">${n.time}</span></div>
+        </div>
+      </div>`).join('') : emptyNotif()}
+  </div>`;
+}
+function emptyNotif(){ return `<div class="empty glass-card"><div class="ee">🔔</div><div style="font-weight:800;">You're all caught up</div></div>`; }
+
+function screenProfile(){
+  const stats = {raised:complaints.filter(c=>c.wardId===CITIZEN_HOME_WARD).length, progress:complaints.filter(c=>c.wardId===CITIZEN_HOME_WARD&&c.status==='progress').length, resolved:complaints.filter(c=>c.wardId===CITIZEN_HOME_WARD&&c.status==='resolved').length};
+  return `
+  <div class="screen">
+    <div class="row between" style="margin:20px 0 18px;"><div class="row gap10"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Profile</h2></div><div class="icon-btn">⚙️</div></div>
+    <div class="glass-card">
+      <div class="row gap12">
+        <div class="avatar" style="width:56px;height:56px;font-size:20px;">CU</div>
+        <div><div style="font-weight:800;font-size:16px;">Citizen User</div><div class="muted" style="font-size:12px;">citizen_demo@example.com</div><div class="muted" style="font-size:12px;">+91 98765 43210</div></div>
+      </div>
+    </div>
+    <div class="row gap10" style="margin:14px 0;">
+      <div class="kpi" style="flex:1;"><div class="kn">${stats.raised}</div><div class="kl">RAISED</div></div>
+      <div class="kpi" style="flex:1;"><div class="kn">${stats.progress}</div><div class="kl">IN PROGRESS</div></div>
+      <div class="kpi" style="flex:1;"><div class="kn">${stats.resolved}</div><div class="kl">RESOLVED</div></div>
+    </div>
+    <div class="glass-card" style="padding:6px 18px;">
+      ${profileRow('📋','My Activity', ()=>nav('home'))}
+      ${profileRow('📍','Saved Locations', ()=>toast('No saved locations yet'))}
+      ${profileRow('🔔','Notifications', ()=>nav('notifications'))}
+      ${profileRow('🔒','Privacy & Security', ()=>nav('privacy'))}
+      ${profileRow('🎨','Theme', ()=>nav('theme-select'))}
+      ${profileRow('ℹ️','About CivicConnect', ()=>toast('CivicConnect v1.0 — a civic grievance prototype'))}
+    </div>
+    <button class="btn btn-danger full" style="margin-top:16px;" onclick="logout()">Log Out</button>
+  </div>`;
+}
+function profileRow(icon,label,onclick){
+  const fnName = '__row_'+Math.random().toString(36).slice(2);
+  window[fnName]=onclick;
+  return `<div class="row between" style="padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="${fnName}()"><div class="row gap10"><span>${icon}</span><span style="font-size:13.5px;font-weight:600;">${label}</span></div><span class="muted">›</span></div>`;
+}
+function logout(){ state.authMode='citizen'; state.history=[]; nav('login',{replace:true}); }
+
+function screenThemeSelect(){
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 18px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Theme</h2></div>
+    ${['light','dark'].map(t=>`
+      <div class="glass-card tight row between" style="margin-bottom:10px;cursor:pointer;" onclick="setTheme('${t}')">
+        <div class="row gap10"><span style="font-size:18px;">${t==='light'?'☀️':'🌙'}</span><span style="font-weight:700;font-size:14px;text-transform:capitalize;">${t}</span></div>
+        <span>${state.theme===t?'●':'○'}</span>
+      </div>`).join('')}
+    <p class="muted" style="font-size:11.5px;margin-top:10px;">Your preference is saved and applied automatically next time.</p>
+  </div>`;
+}
+
+function screenPrivacy(){
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 18px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Privacy & Security</h2></div>
+    <div class="glass-card">
+      <p style="font-size:13px;line-height:1.7;margin:0;">
+        <b>Your identity is never shown to government officials.</b> Complaints and comments you submit always display as "Anonymous Citizen" to officials and other citizens.<br><br>
+        Your account details (name, email, phone) are stored securely and only used for authentication, fraud prevention, and legal/audit purposes where required by law.<br><br>
+        Exact GPS coordinates are stored securely and are never shown publicly — community and official views use your ward or an approximate location only.<br><br>
+        Photos you upload have identifying metadata (EXIF) stripped before upload.
+      </p>
+    </div>
+  </div>`;
+}
+
+/* ---------------- GOVERNMENT SIDE ---------------- */
+function screenGovDashboard(){
+  const role = ROLE(state.activeGovRole);
+  let list = complaints.filter(role.filter);
+  if(state.govSort==='priority') list = [...list].sort((a,b)=>priorityScore(b)-priorityScore(a));
+  else if(state.govSort==='upvoted') list = [...list].sort((a,b)=>b.upvotes-a.upvotes);
+  else if(state.govSort==='oldest') list = [...list].sort((a,b)=>a.createdAt-b.createdAt);
+  else if(state.govSort==='escalated') list = list.filter(c=>c.escalated);
+  else if(state.govSort==='unverified') list = list.filter(c=>!c.govVerified);
+
+  // Authority Construction Projects in scope
+  const isWardOfficial = (role.id === 'WARD_COUNCILLOR');
+  const managedProjects = constructionProjects.filter(p => {
+    if(isWardOfficial) return p.authorityWardId === state.councillorWardId;
+    return true; // SDM, DM, CM, PM see all projects in administrative territory
+  });
+
+  const kpis = {
+    total:list.length, pending:list.filter(c=>c.status==='pending').length,
+    progress:list.filter(c=>c.status==='progress').length, resolved:list.filter(c=>c.status==='resolved').length,
+    escalated:list.filter(c=>c.escalated).length, high:list.filter(c=>priorityLevel(priorityScore(c))==='HIGH').length,
+  };
+
+  const constructionKpis = {
+    total: managedProjects.length,
+    underConstruction: managedProjects.filter(p=>p.status==='Under Construction').length,
+    delayed: managedProjects.filter(p=>p.status==='Delayed').length,
+    majorInfra: managedProjects.filter(p=>p.projectType==='MAJOR_INFRASTRUCTURE').length,
+  };
+
+  return `
+  <div class="screen">
+    <div class="row between" style="margin:20px 0 4px;">
+      <div>
+        <div style="font-weight:800;font-size:17px;" class="display">${role.label}</div>
+        <div class="muted" style="font-size:11.5px;">Jurisdiction: ${role.scope}</div>
+      </div>
+      <div class="icon-btn" onclick="logout()">⎋</div>
+    </div>
+
+    <div class="field" style="margin:12px 0 8px;">
+      <select onchange="switchGovRole(this.value)">
+        ${GOV_ROLES.map(r=>`<option value="${r.id}" ${r.id===role.id?'selected':''}>${r.label} — ${r.scope}</option>`).join('')}
+      </select>
+    </div>
+
+    <!-- Ward Switcher for Ward Councilor Demo -->
+    ${isWardOfficial ? `
+      <div class="row between" style="margin-bottom:12px;background:var(--glass);padding:6px 12px;border-radius:10px;font-size:12px;">
+        <span class="muted">Assigned Ward:</span>
+        <select style="width:auto;padding:4px 8px;font-size:12px;font-weight:700;" onchange="state.councillorWardId=this.value;render();">
+          ${WARDS.map(w=>`<option value="${w.id}" ${w.id===state.councillorWardId?'selected':''}>${w.name}</option>`).join('')}
+        </select>
+      </div>
+    ` : ''}
+
+    <!-- Action Button: Add Construction Project -->
+    <button class="btn btn-primary full gap10" style="margin-bottom:14px;box-shadow:0 8px 24px rgba(90,79,224,.35);" onclick="openNewConstructionFlow()">
+      <span>🚧</span> Map New Construction Project
+    </button>
+
+    <!-- Section Tabs -->
+    <div class="seg" style="margin-bottom:14px;">
+      <div class="seg-item ${state.govTab==='complaints'?'active':''}" onclick="state.govTab='complaints';render()">📋 Complaints (${list.length})</div>
+      <div class="seg-item ${state.govTab==='construction'?'active':''}" onclick="state.govTab='construction';render()">🚧 Construction (${managedProjects.length})</div>
+    </div>
+
+    ${state.govTab === 'complaints' ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="kpi"><div class="kn">${kpis.total}</div><div class="kl">TOTAL</div></div>
+        <div class="kpi"><div class="kn">${kpis.progress}</div><div class="kl">IN PROGRESS</div></div>
+        <div class="kpi"><div class="kn">${kpis.resolved}</div><div class="kl">RESOLVED</div></div>
+        <div class="kpi"><div class="kn" style="color:var(--danger);">${kpis.escalated}</div><div class="kl">ESCALATED</div></div>
+        <div class="kpi"><div class="kn" style="color:var(--warn);">${kpis.high}</div><div class="kl">HIGH PRIORITY</div></div>
+        <div class="kpi"><div class="kn">${kpis.pending}</div><div class="kl">PENDING</div></div>
+      </div>
+
+      <button class="btn btn-outline full" style="margin-bottom:14px;" onclick="nav('escalated')">⚠ View Escalated Complaints (${complaints.filter(c=>c.escalated).length})</button>
+
+      <div class="row gap6" style="margin-bottom:12px;overflow-x:auto;">
+        ${['priority','upvoted','oldest','escalated','unverified'].map(s=>`<div class="chip ${state.govSort===s?'active':''}" onclick="state.govSort='${s}';render()">${s[0].toUpperCase()+s.slice(1)}</div>`).join('')}
+      </div>
+
+      ${list.length? list.map(c=>govCardHTML(c)).join('') : `<div class="empty glass-card"><div class="ee">✅</div><div style="font-weight:800;">Nothing to show here</div></div>`}
+    ` : `
+      <!-- Construction Projects Tab -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div class="kpi"><div class="kn">${constructionKpis.underConstruction}</div><div class="kl">UNDER CONSTRUCTION</div></div>
+        <div class="kpi"><div class="kn" style="color:var(--danger);">${constructionKpis.delayed}</div><div class="kl">DELAYED PROJECTS</div></div>
+        <div class="kpi"><div class="kn" style="color:var(--info);">${constructionKpis.majorInfra}</div><div class="kl">MAJOR INFRASTRUCTURE</div></div>
+        <div class="kpi"><div class="kn">${constructionKpis.total}</div><div class="kl">TOTAL MANAGED</div></div>
+      </div>
+
+      <h4 style="margin:10px 0 8px;font-size:14px;">Authorized Construction Areas</h4>
+      ${managedProjects.length ? managedProjects.map(p => renderGovProjectCardHTML(p)).join('') : `
+        <div class="empty glass-card">
+          <div class="ee">🚧</div>
+          <div style="font-weight:800;font-size:15px;">No active construction mapped yet.</div>
+          <p class="muted" style="font-size:12.5px;margin:6px 0 14px;">Use the button above to draw and publish construction zones on the satellite map.</p>
+        </div>
+      `}
+    `}
+  </div>`;
+}
+function switchGovRole(id){ state.activeGovRole=id; render(); }
+function govCardHTML(c){
+  const cat = CAT(c.category); const score=priorityScore(c); const level=priorityLevel(score); const w=W(c.wardId);
+  return `<div class="complaint-card" onclick="openGovComplaint('${c.id}')">
+    <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};">${cat.icon}</div>
+    <div style="flex:1;min-width:0;">
+      <div class="row between"><b style="font-size:13.5px;">${c.title}</b><span class="priority-tag pr-${level.toLowerCase()}">${level}</span></div>
+      <div class="cc-meta">Anonymous Citizen · ${w.name} · ${c.daysPending}d pending</div>
+      <div class="row gap6" style="margin-top:8px;">
+        <span class="badge ${STATUS_META[c.status].badge}">${STATUS_META[c.status].label}</span>
+        ${c.escalated?'<span class="badge badge-escalated">⚠ Escalated</span>':''}
+        <span class="muted" style="font-size:11px;">▲ ${c.upvotes}</span>
+      </div>
+    </div>
+  </div>`;
+}
+function openGovComplaint(id){ state.activeComplaintId=id; nav('gov-detail'); }
+
+function screenGovDetail(){
+  const c = complaints.find(x=>x.id===state.activeComplaintId);
+  if(!c) return screenGovDashboard();
+  const cat = CAT(c.category); const w=W(c.wardId);
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:17px;">Agent Verification</h2></div>
+    <div class="glass-card" style="margin-bottom:12px;">
+      <div class="muted" style="font-size:11.5px;">Complaint ID</div><div style="font-weight:800;margin-bottom:10px;">#${c.id}</div>
+      <div class="muted" style="font-size:11.5px;">Category</div><div style="font-weight:700;margin-bottom:10px;">${cat.icon} ${cat.label}</div>
+      <div class="muted" style="font-size:11.5px;">Location</div><div style="font-weight:700;margin-bottom:10px;">${w.village}, ${w.name}, ${w.district}</div>
+      <div class="muted" style="font-size:11.5px;">Description</div><div style="font-size:13.5px;margin-bottom:10px;line-height:1.6;">${c.description}</div>
+      ${c.images.length?`<div class="row gap8" style="margin-bottom:10px;">${c.images.map(img=>`<img class="thumb" src="${img.url}">`).join('')}</div>`:''}
+      <div class="muted" style="font-size:11.5px;">Reporter</div>
+      <div class="row gap8" style="margin-bottom:4px;"><span class="chip" style="cursor:default;">🕶️ Anonymous Citizen</span></div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:12px;">
+      <div class="row between" style="margin-bottom:14px;"><b style="font-size:14px;">Verification Status</b>${verifyPillHTML(c,'gov')}</div>
+      <div class="row gap8">
+        <button class="btn btn-success btn-sm" style="flex:1;" onclick="govVerify('${c.id}',true)">Verify Complaint</button>
+        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="govVerify('${c.id}',false)">Reject</button>
+      </div>
+      <button class="btn btn-ghost btn-sm full" style="margin-top:8px;" onclick="toast('Request for more information sent to citizen')">Request More Information</button>
+    </div>
+
+    <div class="glass-card">
+      <b style="font-size:14px;">Update Status</b>
+      <div class="row gap6" style="margin-top:12px;flex-wrap:wrap;">
+        ${Object.keys(STATUS_META).map(s=>`<div class="chip ${c.status===s?'active':''}" onclick="setGovStatus('${c.id}','${s}')">${STATUS_META[s].label}</div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function govVerify(id, approve){ state.activeComplaintId=id; startVerify(id,'gov'); const c=complaints.find(x=>x.id===id); if(!approve){ setTimeout(()=>{ c._vstate='rejected'; c.verificationStatus='REJECTED'; render(); },1600); } }
+function setGovStatus(id, status){
+  const c = complaints.find(x=>x.id===id);
+  if(status==='resolved'){
+    const note = prompt('Resolution note (required):','Issue has been resolved by the ward team.');
+    if(note===null) return;
+    c.timeline.push({title:'Resolved by '+c.assigned, date:fmtDate(new Date()), done:true});
+  } else {
+    c.timeline.push({title:'Status updated to '+STATUS_META[status].label, date:fmtDate(new Date())});
+  }
+  c.status = status;
+  notifications.unshift({text:`Your complaint #${c.id} status changed to "${STATUS_META[status].label}".`, time:'just now', read:false});
+  toast('Status updated · citizen notified');
+  render();
+}
+
+function screenEscalated(){
+  const list = complaints.filter(c=>c.escalated);
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Escalated Complaints</h2></div>
+    <div class="glass-card tight" style="background:rgba(224,67,90,.08);border-color:rgba(224,67,90,.3);margin-bottom:14px;">
+      <p style="font-size:11.5px;color:var(--danger);margin:0;line-height:1.6;">Complaints unresolved past the 14-day window are auto-escalated to the next authority in the chain. History is permanent and cannot be deleted.</p>
+    </div>
+    ${list.map(c=>{
+      const idx = ESCALATION_CHAIN.indexOf('WARD_COUNCILLOR');
+      return `<div class="glass-card" style="margin-bottom:12px;cursor:pointer;" onclick="openGovComplaint('${c.id}')">
+        <div class="row between"><b style="font-size:14px;">#${c.id}</b><span class="badge badge-escalated">⚠ Escalated</span></div>
+        <div class="muted" style="font-size:12.5px;margin:6px 0;">${c.title}</div>
+        <div class="row between" style="font-size:11.5px;margin-top:8px;">
+          <span class="muted">Days Pending: <b style="color:var(--danger);">${c.daysPending}</b></span>
+          <span class="muted">Previous: Ward Councillor</span>
+        </div>
+        <div class="muted" style="font-size:11px;margin-top:4px;">Reason: complaint exceeded the 14-day resolution window.</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+
+/* ============================= CONSTRUCTION & SATELLITE MAPPING ============================= */
+
+function openNewConstructionFlow(){
+  const isWardOfficial = (state.activeGovRole === 'WARD_COUNCILLOR');
+  state.newProject = {
+    type: 'LOCAL_WARD',
+    name: '',
+    description: '',
+    startDate: new Date().toISOString().slice(0,10),
+    endDate: new Date(Date.now() + 14*86400000).toISOString().slice(0,10),
+    sla: '14 days',
+    status: 'Under Construction',
+    altRoute: '',
+    drawMode: 'polygon',
+    geometry: null,
+    drawnPoints: [],
+    isValid: false,
+    validationMsg: ''
+  };
+  nav('new-construction');
+}
+
+function screenNewConstruction(){
+  const isWardOfficial = (state.activeGovRole === 'WARD_COUNCILLOR');
+  const assignedWard = W(state.councillorWardId);
+  const np = state.newProject;
+
+  return `
+  <div class="screen">
+    <div class="row gap10" style="margin:20px 0 14px;">
+      <div class="icon-btn" onclick="back()">←</div>
+      <h2 class="display" style="margin:0;font-size:18px;">Map Construction Project</h2>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;">1. Select Project Type</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div class="chip ${np.type==='LOCAL_WARD'?'active':''}" style="padding:10px 8px;text-align:center;font-size:12px;" onclick="setNewProjType('LOCAL_WARD')">
+          🏘️ Local Ward<br><span style="font-size:10px;opacity:.8;">Restricted to ${assignedWard.name}</span>
+        </div>
+        <div class="chip ${np.type==='MAJOR_INFRASTRUCTURE'?'active':''}" style="padding:10px 8px;text-align:center;font-size:12px;${isWardOfficial?'opacity:.4;pointer-events:none;':''}" onclick="setNewProjType('MAJOR_INFRASTRUCTURE')">
+          🚇 Major Infrastructure<br><span style="font-size:10px;opacity:.8;">${isWardOfficial?'🔒 Requires SDM/DM/State':'Citywide Scope'}</span>
+        </div>
+      </div>
+      ${isWardOfficial && np.type==='LOCAL_WARD' ? `
+        <div class="geo-banner geo-banner-info" style="margin:10px 0 0;font-size:11.5px;">
+          <span>🔒</span>
+          <div>
+            <b>Ward-Level Permission Enforced:</b> You are authorized to map construction strictly within <b>${assignedWard.name}</b>. The backend validates all coordinates.
+          </div>
+        </div>
+      ` : ''}
+      ${!isWardOfficial && np.type==='MAJOR_INFRASTRUCTURE' ? `
+        <div class="geo-banner geo-banner-info" style="margin:10px 0 0;font-size:11.5px;">
+          <span>🌐</span>
+          <div>
+            <b>Broad Geographic Access:</b> As ${ROLE(state.activeGovRole).label}, you can navigate across Lucknow city, draw multi-ward corridors, and publish citywide.
+          </div>
+        </div>
+      ` : ''}
+    </div>
+
+    <div class="glass-card" style="margin-bottom:14px;">
+      <div class="row between" style="margin-bottom:6px;">
+        <label style="font-size:12px;font-weight:700;">2. Draw Construction Area on Satellite Map</label>
+        <span class="link" style="font-size:11.5px;" onclick="toggleConstructionTile()">🛰️ Switch View</span>
+      </div>
+
+      <div class="draw-toolbar">
+        <div class="draw-btn ${np.drawMode==='polygon'?'active':''}" onclick="setDrawMode('polygon')">⬡ Polygon Area</div>
+        <div class="draw-btn ${np.drawMode==='rectangle'?'active':''}" onclick="setDrawMode('rectangle')">▭ Rectangle</div>
+        <div class="draw-btn ${np.drawMode==='line'?'active':''}" onclick="setDrawMode('line')">〰 Road Corridor</div>
+        <div class="draw-btn" style="color:var(--danger);" onclick="clearDrawing()">🗑️ Clear</div>
+      </div>
+
+      <div id="construction-map" class="map-wrap map-wrap-lg"></div>
+
+      <!-- Live Boundary Validation Alert -->
+      <div id="boundary-status-box">
+        ${np.drawnPoints.length ? (
+          np.isValid ? `
+            <div class="geo-banner geo-banner-success">
+              <span>✓</span>
+              <div><b>Boundary Authorization Verified:</b> ${np.validationMsg}</div>
+            </div>
+          ` : `
+            <div class="geo-banner geo-banner-danger">
+              <span>⚠️</span>
+              <div><b>Geographic Authorization Block:</b> ${np.validationMsg}</div>
+            </div>
+          `
+        ) : `
+          <p class="muted" style="font-size:11.5px;margin:4px 0 0;">
+            Click on the map to place vertices marking the affected construction boundary.
+          </p>
+        `}
+      </div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;margin-bottom:10px;display:block;">3. Project Timeline & SLA</label>
+      
+      <div class="field">
+        <label>Project Name</label>
+        <input id="np-name" placeholder="e.g. MG Road Footpath Paver Works" value="${np.name}" oninput="state.newProject.name=this.value">
+      </div>
+
+      <div class="row gap8">
+        <div class="field" style="flex:1;">
+          <label>Start Date</label>
+          <input type="date" id="np-start" value="${np.startDate}" onchange="updateProjectDates(this.value, null)">
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Estimated End Date</label>
+          <input type="date" id="np-end" value="${np.endDate}" onchange="updateProjectDates(null, this.value)">
+        </div>
+      </div>
+
+      <div class="row between" style="background:var(--glass);padding:8px 12px;border-radius:10px;margin-bottom:12px;font-size:12px;">
+        <span class="muted">Estimated Duration:</span>
+        <b id="np-duration-calc" style="color:var(--accent);">${calculateDurationDays(np.startDate, np.endDate)} days</b>
+      </div>
+
+      <div class="field">
+        <label>Official SLA / Agreed Period</label>
+        <input id="np-sla" placeholder="e.g. 14 days or 24 months" value="${np.sla}" oninput="state.newProject.sla=this.value">
+      </div>
+
+      <div class="field">
+        <label>Initial Project Status</label>
+        <select onchange="state.newProject.status=this.value">
+          <option value="Under Construction" ${np.status==='Under Construction'?'selected':''}>Under Construction (Active obstruction)</option>
+          <option value="Planned" ${np.status==='Planned'?'selected':''}>Planned (Upcoming)</option>
+          <option value="Delayed" ${np.status==='Delayed'?'selected':''}>Delayed</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Work Description</label>
+        <textarea id="np-desc" placeholder="Details of the civic or infrastructure work..." oninput="state.newProject.description=this.value">${np.description}</textarea>
+      </div>
+
+      <div class="field">
+        <label>Alternative Route / Detour Advisory</label>
+        <input id="np-alt" placeholder="e.g. Traffic diverted via Ring Road" value="${np.altRoute}" oninput="state.newProject.altRoute=this.value">
+      </div>
+
+      <button id="np-publish-btn" class="btn btn-primary full" style="margin-top:10px;${!np.isValid?'opacity:.5;pointer-events:none;':''}" onclick="submitNewConstructionProject()">
+        Publish Construction Project
+      </button>
+    </div>
+  </div>`;
+}
+
+function setNewProjType(t){
+  state.newProject.type = t;
+  state.newProject.drawnPoints = [];
+  state.newProject.geometry = null;
+  state.newProject.isValid = false;
+  render();
+}
+
+function setDrawMode(mode){
+  state.newProject.drawMode = mode;
+  toast(`Drawing tool: ${mode.toUpperCase()}`);
+  render();
+}
+
+function clearDrawing(){
+  state.newProject.drawnPoints = [];
+  state.newProject.geometry = null;
+  state.newProject.isValid = false;
+  state.newProject.validationMsg = '';
+  render();
+}
+
+function calculateDurationDays(d1, d2){
+  try {
+    const t1 = new Date(d1).getTime();
+    const t2 = new Date(d2).getTime();
+    return Math.max(1, Math.round((t2 - t1) / (1000 * 3600 * 24)));
+  } catch(e) {
+    return 14;
+  }
+}
+
+function updateProjectDates(start, end){
+  if(start) state.newProject.startDate = start;
+  if(end) state.newProject.endDate = end;
+  const days = calculateDurationDays(state.newProject.startDate, state.newProject.endDate);
+  const el = document.getElementById('np-duration-calc');
+  if(el) el.textContent = `${days} days (${(days/30.4).toFixed(1)} months)`;
+  state.newProject.sla = `${days} days`;
+  const slaEl = document.getElementById('np-sla');
+  if(slaEl && !slaEl.value) slaEl.value = `${days} days`;
+}
+
+async function submitNewConstructionProject(){
+  const np = state.newProject;
+  const name = document.getElementById('np-name')?.value || np.name || 'Civil Infrastructure Works';
+  const desc = document.getElementById('np-desc')?.value || np.description || 'Civic infrastructure improvement.';
+  const alt = document.getElementById('np-alt')?.value || np.altRoute || '';
+  const sla = document.getElementById('np-sla')?.value || np.sla || '14 days';
+  const isLocal = (np.type === 'LOCAL_WARD');
+  const wardId = isLocal ? state.councillorWardId : null;
+
+  if(!np.geometry){
+    toast('Please draw the affected construction area on the map first.');
+    return;
+  }
+
+  // Backend geographic verification call
+  const payload = {
+    name,
+    project_type: np.type,
+    authority_id: state.activeGovRole.toLowerCase() + '-user',
+    authority_role: state.activeGovRole,
+    authority_ward_id: wardId,
+    geometry_type: np.geometry.type,
+    geometry: np.geometry,
+    start_date: np.startDate,
+    estimated_end_date: np.endDate,
+    official_sla: sla,
+    status: np.status,
+    description: desc,
+    alternative_route: alt,
+    visibility_scope: isLocal ? 'WARD' : 'PUBLIC_CITY'
+  };
+
+  let createdProject = null;
+  try {
+    const res = await fetch(`${API_BASE}/construction-projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(res.ok){
+      createdProject = await res.json();
+    } else if(res.status === 403) {
+      const err = await res.json();
+      alert(`Backend Authorization Error: ${err.detail || 'Geographic boundary permission denied.'}`);
+      return;
+    }
+  } catch(e) {
+    console.warn('Real backend unreachable, persisting to local prototype store:', e);
+  }
+
+  const projId = (createdProject && createdProject.project_no) || ('PRJ-' + Math.floor(1000 + Math.random()*8999));
+  const newLocalObj = {
+    id: projId,
+    name,
+    projectType: np.type,
+    authorityId: state.activeGovRole.toLowerCase(),
+    authorityRole: state.activeGovRole,
+    authorityWardId: wardId,
+    affectedWardIds: isLocal ? [wardId] : findAffectedWards(np.geometry),
+    geometryType: np.geometry.type,
+    geometry: np.geometry,
+    startDate: np.startDate,
+    estimatedEndDate: np.endDate,
+    durationDays: calculateDurationDays(np.startDate, np.endDate),
+    officialSla: sla,
+    actualCompletionDate: null,
+    status: np.status,
+    description: desc,
+    alternativeRoute: alt,
+    visibilityScope: isLocal ? 'WARD' : 'PUBLIC_CITY',
+    createdAt: new Date(),
+  };
+
+  constructionProjects.unshift(newLocalObj);
+  notifications.unshift({
+    text: `New construction project "${name}" has been mapped and published.`,
+    time: 'just now',
+    read: false
+  });
+
+  state.govTab = 'construction';
+  toast('Construction area published successfully!');
+  nav('gov-dashboard', { replace: true });
+}
+
+/* --- Project Cards & Modal HTML Generators --- */
+function renderProjectCardHTML(p){
+  const isMajor = (p.projectType === 'MAJOR_INFRASTRUCTURE');
+  const isDelayed = (p.status === 'Delayed');
+  return `
+  <div class="project-card" onclick="openProjectModal('${p.id}')">
+    <div class="row between" style="margin-bottom:4px;">
+      <b style="font-size:13.5px;">${p.name}</b>
+      <span class="badge ${isDelayed?'badge-delayed':'badge-construction'}">${p.status}</span>
+    </div>
+    <div class="muted" style="font-size:11.5px;margin-bottom:8px;">
+      ${p.startDate} → ${p.estimatedEndDate} &nbsp;·&nbsp; ${p.durationDays} days
+    </div>
+    <div class="row between">
+      <span class="badge ${isMajor?'badge-major':'badge-local'}">${isMajor?'🚇 Major Public Infrastructure':'🏘️ Local Ward Project'}</span>
+      <span class="link" style="font-size:11.5px;">View Details ›</span>
+    </div>
+  </div>`;
+}
+
+function renderGovProjectCardHTML(p){
+  const isMajor = (p.projectType === 'MAJOR_INFRASTRUCTURE');
+  const isDelayed = (p.status === 'Delayed');
+  return `
+  <div class="project-card" style="margin-bottom:12px;">
+    <div class="row between" style="margin-bottom:4px;">
+      <b style="font-size:14px;">#${p.id} · ${p.name}</b>
+      <span class="badge ${isDelayed?'badge-delayed':'badge-construction'}">${p.status}</span>
+    </div>
+    <p class="muted" style="font-size:12px;margin:4px 0 8px;line-height:1.4;">${p.description}</p>
+    <div class="row between" style="font-size:11.5px;margin-bottom:10px;">
+      <span>Timeline: <b>${p.startDate} to ${p.estimatedEndDate}</b></span>
+      <span class="badge ${isMajor?'badge-major':'badge-local'}">${isMajor?'Major Infrastructure':'Local Ward'}</span>
+    </div>
+    <div class="row gap6">
+      <button class="btn btn-outline btn-sm" style="flex:1;" onclick="updateProjectStatusPrompt('${p.id}')">Update Status</button>
+      <button class="btn btn-ghost btn-sm" onclick="openProjectModal('${p.id}')">Preview on Map</button>
+    </div>
+  </div>`;
+}
+
+function updateProjectStatusPrompt(id){
+  const p = constructionProjects.find(x=>x.id===id);
+  if(!p) return;
+  const newStatus = prompt('Update project status:\n- Under Construction\n- Delayed\n- Completed\n- Planned', p.status);
+  if(newStatus && ['Under Construction','Delayed','Completed','Planned'].includes(newStatus)){
+    p.status = newStatus;
+    if(newStatus === 'Completed'){
+      p.actualCompletionDate = new Date().toISOString().slice(0,10);
+      toast('Project marked Completed and archived from active obstruction maps.');
+    } else if(newStatus === 'Delayed'){
+      const ext = prompt('Enter new estimated completion date (YYYY-MM-DD):', p.estimatedEndDate);
+      if(ext) {
+        p.estimatedEndDate = ext;
+        p.durationDays = calculateDurationDays(p.startDate, ext);
+      }
+      toast('Project updated with delayed timeline.');
+    }
+    render();
+  }
+}
+
+function openProjectModal(id){
+  state.selectedProjectId = id;
+  render();
+}
+
+function closeProjectModal(){
+  state.selectedProjectId = null;
+  render();
+}
+
+function renderProjectModalHTML(p){
+  const isMajor = (p.projectType === 'MAJOR_INFRASTRUCTURE');
+  const isDelayed = (p.status === 'Delayed');
+  const wardNames = (p.affectedWardIds||[]).map(id => W(id)?.name || id).join(', ');
+
+  return `
+  <div class="project-overlay-modal" onclick="closeProjectModal()">
+    <div class="project-modal-content" onclick="event.stopPropagation()">
+      <div class="row between" style="margin-bottom:10px;">
+        <span class="badge ${isMajor?'badge-major':'badge-local'}">${isMajor?'🚇 Major Public Infrastructure':'🏘️ Local Ward Construction'}</span>
+        <div class="icon-btn" onclick="closeProjectModal()">✕</div>
+      </div>
+
+      <h3 class="display" style="margin:0 0 6px;font-size:18px;">${p.name}</h3>
+      <div class="row gap8" style="margin-bottom:12px;">
+        <span class="badge ${isDelayed?'badge-delayed':'badge-construction'}">${p.status}</span>
+        <span class="muted" style="font-size:12px;">#${p.id}</span>
+      </div>
+
+      <div class="glass-card tight" style="margin-bottom:14px;padding:12px 14px;">
+        <div class="row between" style="margin-bottom:6px;font-size:12.5px;">
+          <span class="muted">Construction Period:</span>
+          <b>${p.startDate} — ${p.estimatedEndDate}</b>
+        </div>
+        <div class="row between" style="margin-bottom:6px;font-size:12.5px;">
+          <span class="muted">Estimated Duration:</span>
+          <b>${p.durationDays} days</b>
+        </div>
+        <div class="row between" style="margin-bottom:6px;font-size:12.5px;">
+          <span class="muted">Official Project SLA:</span>
+          <b>${p.officialSla}</b>
+        </div>
+        ${p.actualCompletionDate ? `
+          <div class="row between" style="font-size:12.5px;color:var(--success);">
+            <span>Actual Completed:</span>
+            <b>${p.actualCompletionDate}</b>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="field" style="margin-bottom:10px;">
+        <label>Scope & Affected Jurisdiction</label>
+        <p style="font-size:12.5px;margin:2px 0 0;line-height:1.5;">${wardNames || 'Citywide corridor'}</p>
+      </div>
+
+      <div class="field" style="margin-bottom:10px;">
+        <label>Project Details</label>
+        <p style="font-size:12.5px;margin:2px 0 0;line-height:1.5;">${p.description}</p>
+      </div>
+
+      ${p.alternativeRoute ? `
+        <div class="geo-banner geo-banner-info" style="margin-bottom:16px;">
+          <span>🚗</span>
+          <div>
+            <b>Detour / Alternative Route Advice:</b><br>
+            ${p.alternativeRoute}
+          </div>
+        </div>
+      ` : ''}
+
+      <button class="btn btn-primary full" onclick="closeProjectModal()">Close Card</button>
+    </div>
+  </div>`;
+}
+
+/* ============================= LEAFLET MAP CONTROLLER ============================= */
+let activeRaiseMap = null;
+let activeRaiseMarker = null;
+let activeCivMap = null;
+let activeConstMap = null;
+let constDrawnLayer = null;
+let civMapTileMode = 'satellite';
+let constMapTileMode = 'satellite';
+
+function toggleCivMapTile(){
+  civMapTileMode = (civMapTileMode === 'satellite') ? 'street' : 'satellite';
+  const btn = document.getElementById('civ-map-tile-btn');
+  if(btn) btn.textContent = (civMapTileMode === 'satellite') ? '🛰️ Satellite' : '🗺️ Street';
+  initCivilianMap();
+}
+
+function toggleConstructionTile(){
+  constMapTileMode = (constMapTileMode === 'satellite') ? 'street' : 'satellite';
+  initConstructionMap();
+}
+
+function getTileLayer(mode){
+  if(mode === 'street'){
+    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap'
+    });
+  }
+  // Esri World Imagery Satellite
+  return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Esri Satellite'
+  });
+}
+
+function initRaiseMap(){
+  const container = document.getElementById('raise-map');
+  if(!container) return;
+  if(typeof L === 'undefined'){
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);font-size:12px;">Satellite Map Preview</div>`;
+    return;
+  }
+
+  if(activeRaiseMap){
+    try { activeRaiseMap.remove(); } catch(e){}
+    activeRaiseMap = null;
+  }
+
+  const lat = state.raise.lat || 26.850;
+  const lng = state.raise.lng || 80.945;
+  const detected = detectWardFromCoordinates(lat, lng) || W(state.citizenWardId);
+
+  activeRaiseMap = L.map('raise-map', { zoomControl: false, attributionControl: false }).setView([lat, lng], 14);
+  getTileLayer('satellite').addTo(activeRaiseMap);
+
+  // Draw detected ward polygon outline
+  if(detected && detected.polygon){
+    L.polygon(detected.polygon, {
+      color: '#5a4fe0',
+      fillColor: '#5a4fe0',
+      fillOpacity: 0.15,
+      weight: 2,
+      dashArray: '4,4'
+    }).addTo(activeRaiseMap);
+  }
+
+  // Draggable location pin
+  activeRaiseMarker = L.marker([lat, lng], { draggable: true }).addTo(activeRaiseMap);
+  activeRaiseMarker.on('dragend', function(e){
+    const pos = e.target.getLatLng();
+    setRaiseCoords(pos.lat, pos.lng);
+  });
+
+  activeRaiseMap.on('click', function(e){
+    setRaiseCoords(e.latlng.lat, e.latlng.lng);
+  });
+
+  setTimeout(()=>{ if(activeRaiseMap) activeRaiseMap.invalidateSize(); }, 150);
+}
+
+function initCivilianMap(){
+  const container = document.getElementById('civilian-map');
+  if(!container) return;
+  if(typeof L === 'undefined'){
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);font-size:12px;">Satellite Civic Map Preview</div>`;
+    return;
+  }
+
+  if(activeCivMap){
+    try { activeCivMap.remove(); } catch(e){}
+    activeCivMap = null;
+  }
+
+  const homeWard = W(state.citizenWardId);
+  activeCivMap = L.map('civilian-map', { zoomControl: true, attributionControl: false }).setView(homeWard.center, 13);
+  getTileLayer(civMapTileMode).addTo(activeCivMap);
+
+  // 1. Draw Home Ward Boundary in prominent outline
+  if(homeWard.polygon){
+    L.polygon(homeWard.polygon, {
+      color: '#12a454',
+      fillColor: '#12a454',
+      fillOpacity: 0.08,
+      weight: 2
+    }).addTo(activeCivMap).bindPopup(`<b>Your Ward Jurisdiction: ${homeWard.name}</b>`);
+  }
+
+  // 2. Draw Active Construction Layer according to visibility rules
+  constructionProjects.forEach(p => {
+    if(p.status === 'Completed') return;
+    if(state.constructionFilter === 'active' && p.status !== 'Under Construction') return;
+    if(state.constructionFilter === 'delayed' && p.status !== 'Delayed') return;
+
+    // Visibility Rule:
+    // Major Infrastructure -> visible to everyone
+    // Local Ward -> visible ONLY if matching citizen's ward!
+    const isMajor = (p.projectType === 'MAJOR_INFRASTRUCTURE');
+    if(!isMajor && p.authorityWardId !== state.citizenWardId) return;
+
+    const isDelayed = (p.status === 'Delayed');
+    const color = isDelayed ? '#e0435a' : (isMajor ? '#3f7bf0' : '#e08a1e');
+
+    if(p.geometryType === 'LineString' || (p.geometry && p.geometry.type === 'LineString')){
+      const pts = p.geometry.coordinates || [];
+      const line = L.polyline(pts, {
+        color: color,
+        weight: 6,
+        opacity: 0.85
+      }).addTo(activeCivMap);
+      line.on('click', () => openProjectModal(p.id));
+      line.bindTooltip(`<b>${p.name}</b><br>${p.status} · ${p.officialSla}`);
+    } else {
+      const coords = extractPointsFromGeometry(p.geometry);
+      if(coords.length >= 3){
+        const poly = L.polygon(coords, {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.35,
+          weight: 2,
+          dashArray: isDelayed ? '5,5' : null
+        }).addTo(activeCivMap);
+        poly.on('click', () => openProjectModal(p.id));
+        poly.bindTooltip(`<b>${p.name}</b><br>${p.status} · ${p.officialSla}`);
+      }
+    }
+  });
+
+  // 3. Draw Local Complaints in active ward
+  complaints.filter(c => c.wardId === state.citizenWardId).forEach(c => {
+    const lat = c.latitude || homeWard.center[0] + (Math.random()-0.5)*0.015;
+    const lng = c.longitude || homeWard.center[1] + (Math.random()-0.5)*0.015;
+    const circle = L.circleMarker([lat, lng], {
+      radius: 6,
+      fillColor: '#5a4fe0',
+      color: '#fff',
+      weight: 1.5,
+      fillOpacity: 0.9
+    }).addTo(activeCivMap);
+    circle.bindTooltip(`<b>#${c.id}</b>: ${c.title}`);
+    circle.on('click', () => openComplaint(c.id));
+  });
+
+  setTimeout(()=>{ if(activeCivMap) activeCivMap.invalidateSize(); }, 150);
+}
+
+function initConstructionMap(){
+  const container = document.getElementById('construction-map');
+  if(!container) return;
+  if(typeof L === 'undefined'){
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);font-size:12px;">Satellite Construction Map Preview</div>`;
+    return;
+  }
+
+  if(activeConstMap){
+    try { activeConstMap.remove(); } catch(e){}
+    activeConstMap = null;
+  }
+
+  const np = state.newProject;
+  const isLocal = (np.type === 'LOCAL_WARD');
+  const assignedWard = W(state.councillorWardId);
+
+  const center = isLocal ? assignedWard.center : [26.855, 80.950];
+  const zoom = isLocal ? 14 : 12;
+
+  activeConstMap = L.map('construction-map', { zoomControl: true, attributionControl: false }).setView(center, zoom);
+  getTileLayer(constMapTileMode).addTo(activeConstMap);
+
+  // Clearly outline assigned ward boundary for Local projects
+  if(isLocal && assignedWard.polygon){
+    L.polygon(assignedWard.polygon, {
+      color: '#12a454',
+      fillColor: '#12a454',
+      fillOpacity: 0.12,
+      weight: 3,
+      dashArray: '3,3'
+    }).addTo(activeConstMap).bindTooltip(`<b>Authorized Ward Boundary: ${assignedWard.name}</b>`, { permanent: true, direction: 'top' });
+
+    // Fit map precisely to the authority's ward
+    activeConstMap.fitBounds(assignedWard.polygon);
+  }
+
+  // Draw any points already placed
+  if(np.drawnPoints && np.drawnPoints.length){
+    redrawConstructionShape();
+  }
+
+  // Interactive drawing click handlers
+  activeConstMap.on('click', function(e){
+    const pt = [e.latlng.lat, e.latlng.lng];
+    handleDrawingClick(pt);
+  });
+
+  setTimeout(()=>{ if(activeConstMap) activeConstMap.invalidateSize(); }, 150);
+}
+
+function handleDrawingClick(pt){
+  const np = state.newProject;
+  const assignedWard = W(state.councillorWardId);
+
+  if(np.drawMode === 'rectangle'){
+    if(np.drawnPoints.length === 0){
+      np.drawnPoints.push(pt);
+      toast('Click opposite corner to form rectangle.');
+    } else {
+      const p1 = np.drawnPoints[0];
+      const p2 = pt;
+      const rect = [
+        [p1[0], p1[1]],
+        [p1[0], p2[1]],
+        [p2[0], p2[1]],
+        [p2[0], p1[1]],
+        [p1[0], p1[1]]
+      ];
+      np.drawnPoints = rect;
+      np.geometry = { type: 'Polygon', coordinates: rect };
+      validateAndRenderDrawnShape();
+    }
+    return;
+  }
+
+  // Polygon or Line
+  np.drawnPoints.push(pt);
+  if(np.drawMode === 'line'){
+    np.geometry = { type: 'LineString', coordinates: np.drawnPoints };
+  } else {
+    // Polygon: close the ring
+    const closed = [...np.drawnPoints];
+    if(closed.length >= 3) closed.push(closed[0]);
+    np.geometry = { type: 'Polygon', coordinates: closed };
+  }
+
+  validateAndRenderDrawnShape();
+}
+
+function validateAndRenderDrawnShape(){
+  const np = state.newProject;
+  const isLocal = (np.type === 'LOCAL_WARD');
+  const assignedWard = W(state.councillorWardId);
+
+  if(isLocal){
+    const val = validateGeometryInsideWard(np.geometry, assignedWard);
+    np.isValid = val.valid;
+    np.validationMsg = val.valid ? `All coordinates are strictly contained inside ${assignedWard.name}.` : val.reason;
+  } else {
+    // Major infrastructure
+    const affected = findAffectedWards(np.geometry);
+    np.isValid = (np.drawnPoints.length >= 2);
+    np.validationMsg = `Major infrastructure touches ${affected.length} ward(s): ${affected.map(id=>W(id).name).join(', ')}`;
+  }
+
+  // Update UI warning box
+  const box = document.getElementById('boundary-status-box');
+  if(box){
+    box.innerHTML = np.isValid ? `
+      <div class="geo-banner geo-banner-success">
+        <span>✓</span>
+        <div><b>Boundary Authorization Verified:</b> ${np.validationMsg}</div>
+      </div>
+    ` : `
+      <div class="geo-banner geo-banner-danger">
+        <span>⚠️</span>
+        <div><b>Geographic Authorization Block:</b> ${np.validationMsg}</div>
+      </div>
+    `;
+  }
+
+  const pubBtn = document.getElementById('np-publish-btn');
+  if(pubBtn){
+    if(np.isValid){
+      pubBtn.style.opacity = '1';
+      pubBtn.style.pointerEvents = 'auto';
+    } else {
+      pubBtn.style.opacity = '.5';
+      pubBtn.style.pointerEvents = 'none';
+    }
+  }
+
+  redrawConstructionShape();
+}
+
+function redrawConstructionShape(){
+  if(!activeConstMap) return;
+  if(constDrawnLayer){
+    try { activeConstMap.removeLayer(constDrawnLayer); } catch(e){}
+    constDrawnLayer = null;
+  }
+
+  const np = state.newProject;
+  if(!np.geometry) return;
+
+  const color = np.isValid ? '#12a454' : '#e0435a';
+  if(np.geometry.type === 'LineString'){
+    constDrawnLayer = L.polyline(np.geometry.coordinates, { color, weight: 6 }).addTo(activeConstMap);
+  } else {
+    constDrawnLayer = L.polygon(np.geometry.coordinates, {
+      color, fillColor: color, fillOpacity: 0.35, weight: 2
+    }).addTo(activeConstMap);
+  }
+}
+
+/* ---------------- INIT ---------------- */
+function tickClock(){
+  const el = document.getElementById('clock');
+  if(el) el.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+(async function init(){
+  await loadTheme();
+  document.getElementById('phone').setAttribute('data-theme', state.theme);
+  render();
+  tickClock(); setInterval(tickClock, 30000);
+})();
+</script>
+</body>
+</html>

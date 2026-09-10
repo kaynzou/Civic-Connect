@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "CivicConnect",
+    "slug": "civicconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "civicconnect",
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "CivicConnect uses your location to verify you're reporting from within your ward's jurisdiction.",
+        "NSCameraUsageDescription": "CivicConnect uses your camera to attach photos of civic issues to your complaint.",
+        "NSPhotoLibraryUsageDescription": "CivicConnect needs photo library access so you can attach existing photos to a complaint."
+      }
+    },
+    "android": {
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA"],
+      "package": "gov.civicconnect.app"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "CivicConnect uses your location to verify ward jurisdiction when reporting a civic issue."
+        }
+      ]
+    ]
+  }
+}
