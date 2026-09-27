@@ -1194,9 +1194,24 @@
     if (state.screen === 'gov-analytics' && G.an.tab === 'map') setTimeout(initAnalyticsMap, 60);
   }
 
+  // Called by GovAPI.upgradeToLive(): re-open the same official session on the real server.
+  async function onModeChange(authorityId) {
+    G.directory = null;
+    G.cache = {};
+    if (authorityId) {
+      try {
+        await startSession(authorityId);
+        toast('Connected to the live server - access is now enforced server-side');
+      } catch (e) {
+        await API.goOffline();
+      }
+    }
+    if (state.screen === 'gov-login' || DATA_SCREENS.indexOf(state.screen) >= 0) refresh();
+  }
+
   /* ============================================================ exports */
   window.GovUI = {
-    GOV_SCREENS, renderGovNav, afterRender, citizenCard, syncCitizen,
+    GOV_SCREENS, renderGovNav, afterRender, citizenCard, syncCitizen, onModeChange,
     setLoginRole(r) {
       G.loginRole = r;
       const first = (G.directory || []).find(a => a.role === r && (r !== 'WARD_COUNCILLOR' || a.id === 'wc-ward24')) || (G.directory || []).find(a => a.role === r);

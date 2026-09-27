@@ -151,19 +151,28 @@
     },
   };
 
-  // A sleeping free-tier server (Render) can take ~50 s to wake. Ping it once in
-  // the background; if it answers before any official signs in, switch to live.
-  if (!GovAPI.forceOffline && !/localhost|127\.0\.0\.1/.test(GovAPI.base)) {
+  // Switch an offline session to the real server (e.g. once a sleeping host wakes up).
+  GovAPI.upgradeToLive = async function () {
+    if (this.mode === 'live') return;
+    const authorityId = this.authority && this.authority.id;
+    this.mode = 'live';
+    this._detecting = Promise.resolve('live');
+    this.token = null;
+    this.citizenToken = null;
+    if (root.GovUI && root.GovUI.onModeChange) await root.GovUI.onModeChange(authorityId);
+  };
+
+  // A sleeping free-tier server (Render) takes 30-60 s to wake - longer than the
+  // 4 s the page waits before choosing a mode. Keep a request open in the
+  // background and move to live as soon as the server answers.
+  function wakeServer(attempt) {
     fetch(GovAPI.base + '/gov/health').then(res => {
-      if (res.ok && GovAPI.mode !== 'live' && !GovAPI.token) {
-        GovAPI.mode = 'live';
-        GovAPI._detecting = Promise.resolve('live');
-        if (root.GOV) root.GOV.directory = null;
-        // `state`/`render` are top-level bindings of the main prototype script
-        if (typeof state !== 'undefined' && state.screen === 'gov-login' && typeof render === 'function') render();
-      }
-    }).catch(() => {});
+      if (res.ok && GovAPI.mode !== 'live') GovAPI.upgradeToLive();
+    }).catch(() => {
+      if (attempt < 8) setTimeout(() => wakeServer(attempt + 1), 15000);
+    });
   }
+  if (!GovAPI.forceOffline && !/localhost|127\.0\.0\.1/.test(GovAPI.base)) wakeServer(0);
 
   root.GovAPI = GovAPI;
   root.GovApiError = ApiError;
