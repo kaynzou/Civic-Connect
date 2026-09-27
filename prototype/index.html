@@ -6,6 +6,12 @@
 <title>CivicConnect</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<!-- Government Portal: hierarchical analytics, SLA escalation & performance ranking -->
+<link rel="stylesheet" href="analytics/analytics.css">
+<script src="analytics/engine.js"></script>
+<script src="analytics/local-server.js"></script>
+<script src="analytics/api.js"></script>
+<script src="analytics/ui.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -420,7 +426,7 @@ label{font-size:12.5px; font-weight:700; color:var(--text-2); margin:0 0 6px 2px
 
 <script>
 /* ============================= BACKEND CONNECTION ============================= */
-const API_BASE = "https://citycare-backend-ft8o.onrender.com/api";
+const API_BASE = GovAPI.base;
 
 /* ============================= DATA LAYER (mock) ============================= */
 const CATEGORIES = [
@@ -732,15 +738,16 @@ function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d; }
 function fmtDate(d){ return d.toLocaleDateString('en-IN',{day:'2-digit', month:'short', year:'numeric'}); }
 
 let complaints = [
+  mkComplaint({id:'CMP24002', category:'streetlights', title:'Street Light Not Working Near Begum Hazrat Mahal Park', desc:'The street light next to the park gate has been off for over a week; the stretch is completely dark after 7 pm.', wardId:'ward24', status:'resolved', severity:2, upvotes:21, daysPending:0, communityVerified:true, govVerified:true, assigned:'Ward Councillor · Ward 24', createdDaysAgo:9, resolvedDaysAgo:1}),
   mkComplaint({id:'CMP24001', category:'infrastructure', title:'Broken Footpath Tiles on MG Marg', desc:'The footpath tiles near my house on Mahatma Gandhi Marg are broken, causing elderly pedestrians to trip.', wardId:'ward24', status:'progress', severity:3, upvotes:94, daysPending:4, communityVerified:true, govVerified:true, assigned:'Ward Councillor · Ward 24', createdDaysAgo:4}),
   mkComplaint({id:'CMP11234', category:'roads', title:'Pothole on 5th Street', desc:'Large pothole causing vehicle damage and traffic issues near the main junction.', wardId:'ward42', status:'progress', severity:4, upvotes:127, daysPending:6, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:6}),
   mkComplaint({id:'CMP11233', category:'streetlights', title:'Street Light Not Working', desc:'Three consecutive street lights have been non-functional for two weeks, making the lane unsafe at night.', wardId:'ward42', status:'progress', severity:3, upvotes:64, daysPending:9, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:9}),
   mkComplaint({id:'CMP11232', category:'garbage', title:'Garbage Overflowing', desc:'Community bin has not been cleared in over a week and is overflowing onto the footpath.', wardId:'ward42', status:'verified', severity:2, upvotes:31, daysPending:3, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:3}),
-  mkComplaint({id:'CMP11229', category:'drainage', title:'Blocked Drain Near Market', desc:'Stagnant water from a blocked drain is creating a mosquito breeding risk outside the vegetable market.', wardId:'ward42', status:'escalated', severity:4, upvotes:203, daysPending:17, communityVerified:true, govVerified:true, assigned:'SDM', createdDaysAgo:17, escalated:true}),
+  mkComplaint({id:'CMP11229', category:'drainage', title:'Blocked Drain Near Market', desc:'Stagnant water from a blocked drain is creating a mosquito breeding risk outside the vegetable market.', wardId:'ward42', status:'escalated', severity:4, upvotes:203, daysPending:17, communityVerified:true, govVerified:true, assigned:'SDM · Lucknow Sadar', createdDaysAgo:17, escalated:true}),
   mkComplaint({id:'CMP11221', category:'water', title:'Water Leakage on Service Road', desc:'Continuous leakage from an underground pipe is wasting water and damaging the road surface.', wardId:'ward17', status:'pending', severity:3, upvotes:18, daysPending:2, communityVerified:false, govVerified:false, assigned:'Ward Councillor', createdDaysAgo:2}),
-  mkComplaint({id:'CMP11219', category:'infrastructure', title:'Broken Footpath Tiles', desc:'Several footpath tiles are cracked and raised, creating a tripping hazard for pedestrians.', wardId:'ward17', status:'resolved', severity:2, upvotes:47, daysPending:0, communityVerified:true, govVerified:true, assigned:'Ward Councillor', createdDaysAgo:22, resolvedDaysAgo:4}),
-  mkComplaint({id:'CMP11305', category:'crime', title:'Illegal Dumping at Riverbank', desc:'Unknown persons are dumping construction waste at the riverbank late at night, blocking the walking path.', wardId:'ward7', status:'verified', severity:4, upvotes:88, daysPending:5, communityVerified:true, govVerified:true, assigned:'Police / SDM', createdDaysAgo:5, isCrime:true}),
-  mkComplaint({id:'CMP11298', category:'electricity', title:'Exposed Live Wire Near School', desc:'A low-hanging live wire near the school gate poses a serious safety hazard to children.', wardId:'ward7', status:'escalated', severity:5, upvotes:341, daysPending:19, communityVerified:true, govVerified:true, assigned:'DM Office', createdDaysAgo:19, escalated:true}),
+  mkComplaint({id:'CMP11219', category:'infrastructure', title:'Broken Footpath Tiles', desc:'Several footpath tiles are cracked and raised, creating a tripping hazard for pedestrians.', wardId:'ward17', status:'resolved', severity:2, upvotes:47, daysPending:0, communityVerified:true, govVerified:true, assigned:'SDM · Lucknow Sadar', createdDaysAgo:22, resolvedDaysAgo:4, escalated:true}),
+  mkComplaint({id:'CMP11305', category:'crime', title:'Illegal Dumping at Riverbank', desc:'Unknown persons are dumping construction waste at the riverbank late at night, blocking the walking path.', wardId:'ward7', status:'escalated', severity:4, upvotes:88, daysPending:5, communityVerified:true, govVerified:true, assigned:'SDM · Lucknow Sadar', createdDaysAgo:5, isCrime:true, escalated:true}),
+  mkComplaint({id:'CMP11298', category:'electricity', title:'Exposed Live Wire Near School', desc:'A low-hanging live wire near the school gate poses a serious safety hazard to children.', wardId:'ward7', status:'escalated', severity:5, upvotes:341, daysPending:19, communityVerified:true, govVerified:true, assigned:'District Magistrate · Lucknow', createdDaysAgo:19, escalated:true}),
 ];
 
 function mkComplaint(o){
@@ -751,8 +758,9 @@ function mkComplaint(o){
   timeline.push({title:'Assigned to '+o.assigned, date:fmtDate(daysAgo(o.createdDaysAgo-2))});
   if(o.status==='progress'||o.status==='resolved'||o.status==='escalated') timeline.push({title:'Work in progress', date:fmtDate(daysAgo(Math.max(o.createdDaysAgo-4,0)))});
   if(o.escalated){
-    timeline.push({title:'14-day deadline passed', date:fmtDate(daysAgo(o.createdDaysAgo-14)), escalated:true});
-    timeline.push({title:'Escalated to '+o.assigned, date:fmtDate(daysAgo(o.createdDaysAgo-15)), escalated:true});
+    const sla = CCEngine.slaDays(o.category);
+    timeline.push({title:sla+'-day SLA deadline passed', date:fmtDate(daysAgo(o.createdDaysAgo-sla)), escalated:true});
+    timeline.push({title:'Escalated to '+o.assigned, date:fmtDate(daysAgo(o.createdDaysAgo-sla)), escalated:true});
   }
   if(o.status==='resolved') timeline.push({title:'Resolved by '+o.assigned, date:fmtDate(daysAgo(o.resolvedDaysAgo||0)), done:true});
   return {
@@ -874,8 +882,13 @@ function render(){
   const root = document.getElementById('screen-root');
   const nav_ = document.getElementById('bottomnav');
   const citizenTabs = ['home','community','category','raise-complaint','notifications','profile'];
+  const keepScroll = state._keepScroll; state._keepScroll = false;
+  const prevScroll = root.scrollTop;
+  root.classList.toggle('no-anim', !!keepScroll); // data refreshes should not replay the entry animation
   if(state.authMode==='citizen' && citizenTabs.includes(state.screen)){
     nav_.classList.remove('hidden'); renderBottomNav();
+  } else if(state.authMode==='gov' && GovUI.GOV_SCREENS.includes(state.screen)){
+    nav_.classList.remove('hidden'); GovUI.renderGovNav();
   } else {
     nav_.classList.add('hidden');
   }
@@ -888,6 +901,7 @@ function render(){
     'gov-detail': screenGovDetail, escalated: screenEscalated, privacy: screenPrivacy,
     'theme-select': screenThemeSelect,
     'new-construction': screenNewConstruction,
+    'gov-analytics': screenGovAnalytics, 'gov-profile': screenGovProfile,
   };
   root.innerHTML = (screens[state.screen]||screenHome)();
 
@@ -902,8 +916,7 @@ function render(){
     }
   }
 
-  window.scrollTo(0,0);
-  root.scrollTop = 0;
+  if(keepScroll){ root.scrollTop = prevScroll; } else { window.scrollTo(0,0); root.scrollTop = 0; }
 
   // Initialize interactive maps after DOM attachment
   if(state.screen === 'raise-complaint') {
@@ -913,6 +926,7 @@ function render(){
   } else if(state.screen === 'new-construction') {
     setTimeout(initConstructionMap, 80);
   }
+  GovUI.afterRender();
 }
 
 function renderBottomNav(){
@@ -977,7 +991,7 @@ function screenLogin(){
     </div>
   </div>`;
 }
-function loginAsCitizen(){ state.authMode='citizen'; state.history=[]; nav('home',{replace:true}); }
+function loginAsCitizen(){ state.authMode='citizen'; state.history=[]; GovAPI.citizenLogin(); nav('home',{replace:true}); }
 
 function screenSignup(){
   return `
@@ -997,33 +1011,7 @@ function screenSignup(){
   </div>`;
 }
 
-function screenGovLogin(){
-  return `
-  <div class="screen no-pad-bottom">
-    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="nav('login')">←</div><h2 class="display" style="margin:0;font-size:18px;">Government Official Login</h2></div>
-    <div class="glass-card">
-      <p class="muted" style="font-size:12.5px;line-height:1.5;margin-top:0;">Government accounts are issued by the administration and cannot be self-registered. Select a demo role to preview that dashboard.</p>
-      <div class="field"><label>Official ID</label><input value="GOV-DEMO-2026" disabled></div>
-      <div class="field"><label>Password</label><input type="password" value="••••••••" disabled></div>
-      <div class="field">
-        <label>Demo Role (development only)</label>
-        <select id="gov-role-select">
-          ${GOV_ROLES.map(r=>`<option value="${r.id}">${r.label} — ${r.scope}</option>`).join('')}
-        </select>
-      </div>
-      <button class="btn btn-primary full" onclick="loginAsGov()">Log In as Official</button>
-    </div>
-    <div class="glass-card tight" style="margin-top:14px;background:rgba(224,138,30,.1);border-color:rgba(224,138,30,.3);">
-      <p style="font-size:11.5px;color:var(--warn);margin:0;line-height:1.5;"><b>Demo mode:</b> in production, officials authenticate with government-issued credentials only — this role switcher exists solely to preview role-based access for this prototype.</p>
-    </div>
-  </div>`;
-}
-function loginAsGov(){
-  const sel = document.getElementById('gov-role-select');
-  state.activeGovRole = sel ? sel.value : 'WARD_COUNCILLOR';
-  state.authMode='gov'; state.history=[];
-  nav('gov-dashboard',{replace:true});
-}
+/* Government login -> analytics/ui.js (official accounts with a jurisdiction, issued by the API). */
 
 function screenHome(){
   const mine = complaints.filter(c=>c.wardId===CITIZEN_HOME_WARD);
@@ -1090,7 +1078,7 @@ function emptyStateHTML(){
     <button class="btn btn-primary" onclick="nav('category')">Raise a Complaint</button>
   </div>`;
 }
-function openComplaint(id){ state.activeComplaintId=id; nav('complaint-details'); }
+function openComplaint(id){ state.activeComplaintId=id; nav('complaint-details'); GovUI.syncCitizen(complaints.find(x=>x.id===id)); }
 
 function screenCategory(){
   return `
@@ -1283,7 +1271,26 @@ async function submitComplaint(){
   let realId = null;
   let translatedText = null;
   let detectedLanguage = null;
+  let routed = null;
+  const routingFields = {
+    category: cat.label, location: locationText, description: descriptionText, target_language: 'en',
+    category_key: cat.id, latitude: state.raise.lat || 26.850, longitude: state.raise.lng || 80.945,
+    severity: state.raise.severity, title: cat.label + ' Report',
+  };
   try {
+    await GovAPI.detect();
+    if(GovAPI.mode === 'live'){
+      const r = await GovAPI.submitComplaint(routingFields, state.raise.images.map(img => img.file));
+      routed = r.lifecycle; realId = routed.id;
+      if(r.intake){
+        if(r.intake.translated_text && r.intake.translated_text.trim() !== descriptionText.trim()) translatedText = r.intake.translated_text;
+        if(r.intake.detected_language && r.intake.detected_language !== 'unknown') detectedLanguage = r.intake.detected_language;
+      }
+    }
+  } catch(err) {
+    console.warn('Jurisdiction routing (/api/v2) unavailable, using the original intake call:', err);
+  }
+  if(!routed) try {
     const formData = new FormData();
     formData.append('category', cat.label);
     formData.append('location', locationText);
@@ -1313,14 +1320,18 @@ async function submitComplaint(){
   }
 
   const id = realId || ('CMP'+Math.floor(10000+Math.random()*89999));
-  const targetWardId = state.raise.ward || state.citizenWardId || 'ward24';
+  if(!routed && GovAPI.mode === 'offline'){
+    try { routed = (await GovAPI.submitComplaint(Object.assign({id}, routingFields))).lifecycle; } catch(e) { console.warn('Offline routing failed:', e); }
+  }
+  state.lastRouted = routed;
+  const targetWardId = (routed && WARDS.some(w=>w.id===routed.ward_id)) ? routed.ward_id : (state.raise.ward || state.citizenWardId || 'ward24');
   const targetWard = W(targetWardId);
 
   const c = mkComplaint({
     id, category:cat.id, title:cat.label+' Report', desc: descriptionText,
     wardId: targetWardId, status:'pending', severity:state.raise.severity,
     upvotes:0, daysPending:0, communityVerified:false, govVerified:false,
-    assigned: targetWard ? targetWard.councillor : 'Ward Councillor',
+    assigned: routed ? routed.assigned_to : (targetWard ? targetWard.councillor : 'Ward Councillor'),
     createdDaysAgo:0, isCrime:cat.id==='crime',
   });
   c.latitude = state.raise.lat || targetWard.center[0];
@@ -1331,7 +1342,7 @@ async function submitComplaint(){
   c.images = state.raise.images;
   complaints.unshift(c);
   state.lastSubmittedId = id;
-  notifications.unshift({text:`Your concern has been forwarded to the appropriate authority. (#${id})`, time:'just now', read:false});
+  notifications.unshift({text: routed ? `#${id} was routed to ${routed.assigned_to}. Resolution due within ${routed.sla.days} days, or it escalates automatically.` : `Your concern has been forwarded to the appropriate authority. (#${id})`, time:'just now', read:false});
   nav('submit-success',{replace:true});
 }
 
@@ -1344,7 +1355,7 @@ function screenSuccess(){
     </div>
     <h2 class="display" style="margin:0 0 6px;">Complaint Registered</h2>
     <p class="muted" style="font-size:14px;">Complaint ID: <b style="color:var(--text);">#${id}</b></p>
-    <p class="muted" style="font-size:13px;max-width:280px;margin:14px auto 26px;line-height:1.6;">Your concern has been forwarded to the appropriate authority. You'll be notified as it progresses.</p>
+    <p class="muted" style="font-size:13px;max-width:280px;margin:14px auto 26px;line-height:1.6;">${state.lastRouted ? `Assigned to <b style="color:var(--text);">${state.lastRouted.assigned_to}</b>. If it is not resolved within <b style="color:var(--text);">${state.lastRouted.sla.days} days</b>, it escalates automatically to the SDM.` : `Your concern has been forwarded to the appropriate authority. You'll be notified as it progresses.`}</p>
     <button class="btn btn-primary full" onclick="openComplaint('${id}')">Track This Complaint</button>
     <button class="btn btn-ghost full" style="margin-top:10px;" onclick="nav('home',{replace:true})">Back to Home</button>
   </div>`;
@@ -1405,6 +1416,7 @@ function screenDetails(){
       </div>
     </div>
 
+    ${GovUI.citizenCard(c)}
     <div class="glass-card" style="margin-bottom:12px;">
       <div class="row between" style="margin-bottom:14px;">
         <b style="font-size:14px;">Verification</b>
@@ -1630,7 +1642,7 @@ function profileRow(icon,label,onclick){
   window[fnName]=onclick;
   return `<div class="row between" style="padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="${fnName}()"><div class="row gap10"><span>${icon}</span><span style="font-size:13.5px;font-weight:600;">${label}</span></div><span class="muted">›</span></div>`;
 }
-function logout(){ state.authMode='citizen'; state.history=[]; nav('login',{replace:true}); }
+function logout(){ state.authMode='citizen'; state.history=[]; GovAPI.logout(); GOV.authority=null; document.getElementById('phone').classList.remove('wide'); nav('login',{replace:true}); }
 
 function screenThemeSelect(){
   return `
@@ -1660,201 +1672,11 @@ function screenPrivacy(){
   </div>`;
 }
 
-/* ---------------- GOVERNMENT SIDE ---------------- */
-function screenGovDashboard(){
-  const role = ROLE(state.activeGovRole);
-  let list = complaints.filter(role.filter);
-  if(state.govSort==='priority') list = [...list].sort((a,b)=>priorityScore(b)-priorityScore(a));
-  else if(state.govSort==='upvoted') list = [...list].sort((a,b)=>b.upvotes-a.upvotes);
-  else if(state.govSort==='oldest') list = [...list].sort((a,b)=>a.createdAt-b.createdAt);
-  else if(state.govSort==='escalated') list = list.filter(c=>c.escalated);
-  else if(state.govSort==='unverified') list = list.filter(c=>!c.govVerified);
-
-  // Authority Construction Projects in scope
-  const isWardOfficial = (role.id === 'WARD_COUNCILLOR');
-  const managedProjects = constructionProjects.filter(p => {
-    if(isWardOfficial) return p.authorityWardId === state.councillorWardId;
-    return true; // SDM, DM, CM, PM see all projects in administrative territory
-  });
-
-  const kpis = {
-    total:list.length, pending:list.filter(c=>c.status==='pending').length,
-    progress:list.filter(c=>c.status==='progress').length, resolved:list.filter(c=>c.status==='resolved').length,
-    escalated:list.filter(c=>c.escalated).length, high:list.filter(c=>priorityLevel(priorityScore(c))==='HIGH').length,
-  };
-
-  const constructionKpis = {
-    total: managedProjects.length,
-    underConstruction: managedProjects.filter(p=>p.status==='Under Construction').length,
-    delayed: managedProjects.filter(p=>p.status==='Delayed').length,
-    majorInfra: managedProjects.filter(p=>p.projectType==='MAJOR_INFRASTRUCTURE').length,
-  };
-
-  return `
-  <div class="screen">
-    <div class="row between" style="margin:20px 0 4px;">
-      <div>
-        <div style="font-weight:800;font-size:17px;" class="display">${role.label}</div>
-        <div class="muted" style="font-size:11.5px;">Jurisdiction: ${role.scope}</div>
-      </div>
-      <div class="icon-btn" onclick="logout()">⎋</div>
-    </div>
-
-    <div class="field" style="margin:12px 0 8px;">
-      <select onchange="switchGovRole(this.value)">
-        ${GOV_ROLES.map(r=>`<option value="${r.id}" ${r.id===role.id?'selected':''}>${r.label} — ${r.scope}</option>`).join('')}
-      </select>
-    </div>
-
-    <!-- Ward Switcher for Ward Councilor Demo -->
-    ${isWardOfficial ? `
-      <div class="row between" style="margin-bottom:12px;background:var(--glass);padding:6px 12px;border-radius:10px;font-size:12px;">
-        <span class="muted">Assigned Ward:</span>
-        <select style="width:auto;padding:4px 8px;font-size:12px;font-weight:700;" onchange="state.councillorWardId=this.value;render();">
-          ${WARDS.map(w=>`<option value="${w.id}" ${w.id===state.councillorWardId?'selected':''}>${w.name}</option>`).join('')}
-        </select>
-      </div>
-    ` : ''}
-
-    <!-- Action Button: Add Construction Project -->
-    <button class="btn btn-primary full gap10" style="margin-bottom:14px;box-shadow:0 8px 24px rgba(90,79,224,.35);" onclick="openNewConstructionFlow()">
-      <span>🚧</span> Map New Construction Project
-    </button>
-
-    <!-- Section Tabs -->
-    <div class="seg" style="margin-bottom:14px;">
-      <div class="seg-item ${state.govTab==='complaints'?'active':''}" onclick="state.govTab='complaints';render()">📋 Complaints (${list.length})</div>
-      <div class="seg-item ${state.govTab==='construction'?'active':''}" onclick="state.govTab='construction';render()">🚧 Construction (${managedProjects.length})</div>
-    </div>
-
-    ${state.govTab === 'complaints' ? `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
-        <div class="kpi"><div class="kn">${kpis.total}</div><div class="kl">TOTAL</div></div>
-        <div class="kpi"><div class="kn">${kpis.progress}</div><div class="kl">IN PROGRESS</div></div>
-        <div class="kpi"><div class="kn">${kpis.resolved}</div><div class="kl">RESOLVED</div></div>
-        <div class="kpi"><div class="kn" style="color:var(--danger);">${kpis.escalated}</div><div class="kl">ESCALATED</div></div>
-        <div class="kpi"><div class="kn" style="color:var(--warn);">${kpis.high}</div><div class="kl">HIGH PRIORITY</div></div>
-        <div class="kpi"><div class="kn">${kpis.pending}</div><div class="kl">PENDING</div></div>
-      </div>
-
-      <button class="btn btn-outline full" style="margin-bottom:14px;" onclick="nav('escalated')">⚠ View Escalated Complaints (${complaints.filter(c=>c.escalated).length})</button>
-
-      <div class="row gap6" style="margin-bottom:12px;overflow-x:auto;">
-        ${['priority','upvoted','oldest','escalated','unverified'].map(s=>`<div class="chip ${state.govSort===s?'active':''}" onclick="state.govSort='${s}';render()">${s[0].toUpperCase()+s.slice(1)}</div>`).join('')}
-      </div>
-
-      ${list.length? list.map(c=>govCardHTML(c)).join('') : `<div class="empty glass-card"><div class="ee">✅</div><div style="font-weight:800;">Nothing to show here</div></div>`}
-    ` : `
-      <!-- Construction Projects Tab -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-        <div class="kpi"><div class="kn">${constructionKpis.underConstruction}</div><div class="kl">UNDER CONSTRUCTION</div></div>
-        <div class="kpi"><div class="kn" style="color:var(--danger);">${constructionKpis.delayed}</div><div class="kl">DELAYED PROJECTS</div></div>
-        <div class="kpi"><div class="kn" style="color:var(--info);">${constructionKpis.majorInfra}</div><div class="kl">MAJOR INFRASTRUCTURE</div></div>
-        <div class="kpi"><div class="kn">${constructionKpis.total}</div><div class="kl">TOTAL MANAGED</div></div>
-      </div>
-
-      <h4 style="margin:10px 0 8px;font-size:14px;">Authorized Construction Areas</h4>
-      ${managedProjects.length ? managedProjects.map(p => renderGovProjectCardHTML(p)).join('') : `
-        <div class="empty glass-card">
-          <div class="ee">🚧</div>
-          <div style="font-weight:800;font-size:15px;">No active construction mapped yet.</div>
-          <p class="muted" style="font-size:12.5px;margin:6px 0 14px;">Use the button above to draw and publish construction zones on the satellite map.</p>
-        </div>
-      `}
-    `}
-  </div>`;
-}
-function switchGovRole(id){ state.activeGovRole=id; render(); }
-function govCardHTML(c){
-  const cat = CAT(c.category); const score=priorityScore(c); const level=priorityLevel(score); const w=W(c.wardId);
-  return `<div class="complaint-card" onclick="openGovComplaint('${c.id}')">
-    <div class="cat-icon" style="background:${cat.color}22;color:${cat.color};">${cat.icon}</div>
-    <div style="flex:1;min-width:0;">
-      <div class="row between"><b style="font-size:13.5px;">${c.title}</b><span class="priority-tag pr-${level.toLowerCase()}">${level}</span></div>
-      <div class="cc-meta">Anonymous Citizen · ${w.name} · ${c.daysPending}d pending</div>
-      <div class="row gap6" style="margin-top:8px;">
-        <span class="badge ${STATUS_META[c.status].badge}">${STATUS_META[c.status].label}</span>
-        ${c.escalated?'<span class="badge badge-escalated">⚠ Escalated</span>':''}
-        <span class="muted" style="font-size:11px;">▲ ${c.upvotes}</span>
-      </div>
-    </div>
-  </div>`;
-}
-function openGovComplaint(id){ state.activeComplaintId=id; nav('gov-detail'); }
-
-function screenGovDetail(){
-  const c = complaints.find(x=>x.id===state.activeComplaintId);
-  if(!c) return screenGovDashboard();
-  const cat = CAT(c.category); const w=W(c.wardId);
-  return `
-  <div class="screen">
-    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:17px;">Agent Verification</h2></div>
-    <div class="glass-card" style="margin-bottom:12px;">
-      <div class="muted" style="font-size:11.5px;">Complaint ID</div><div style="font-weight:800;margin-bottom:10px;">#${c.id}</div>
-      <div class="muted" style="font-size:11.5px;">Category</div><div style="font-weight:700;margin-bottom:10px;">${cat.icon} ${cat.label}</div>
-      <div class="muted" style="font-size:11.5px;">Location</div><div style="font-weight:700;margin-bottom:10px;">${w.village}, ${w.name}, ${w.district}</div>
-      <div class="muted" style="font-size:11.5px;">Description</div><div style="font-size:13.5px;margin-bottom:10px;line-height:1.6;">${c.description}</div>
-      ${c.images.length?`<div class="row gap8" style="margin-bottom:10px;">${c.images.map(img=>`<img class="thumb" src="${img.url}">`).join('')}</div>`:''}
-      <div class="muted" style="font-size:11.5px;">Reporter</div>
-      <div class="row gap8" style="margin-bottom:4px;"><span class="chip" style="cursor:default;">🕶️ Anonymous Citizen</span></div>
-    </div>
-
-    <div class="glass-card" style="margin-bottom:12px;">
-      <div class="row between" style="margin-bottom:14px;"><b style="font-size:14px;">Verification Status</b>${verifyPillHTML(c,'gov')}</div>
-      <div class="row gap8">
-        <button class="btn btn-success btn-sm" style="flex:1;" onclick="govVerify('${c.id}',true)">Verify Complaint</button>
-        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="govVerify('${c.id}',false)">Reject</button>
-      </div>
-      <button class="btn btn-ghost btn-sm full" style="margin-top:8px;" onclick="toast('Request for more information sent to citizen')">Request More Information</button>
-    </div>
-
-    <div class="glass-card">
-      <b style="font-size:14px;">Update Status</b>
-      <div class="row gap6" style="margin-top:12px;flex-wrap:wrap;">
-        ${Object.keys(STATUS_META).map(s=>`<div class="chip ${c.status===s?'active':''}" onclick="setGovStatus('${c.id}','${s}')">${STATUS_META[s].label}</div>`).join('')}
-      </div>
-    </div>
-  </div>`;
-}
-function govVerify(id, approve){ state.activeComplaintId=id; startVerify(id,'gov'); const c=complaints.find(x=>x.id===id); if(!approve){ setTimeout(()=>{ c._vstate='rejected'; c.verificationStatus='REJECTED'; render(); },1600); } }
-function setGovStatus(id, status){
-  const c = complaints.find(x=>x.id===id);
-  if(status==='resolved'){
-    const note = prompt('Resolution note (required):','Issue has been resolved by the ward team.');
-    if(note===null) return;
-    c.timeline.push({title:'Resolved by '+c.assigned, date:fmtDate(new Date()), done:true});
-  } else {
-    c.timeline.push({title:'Status updated to '+STATUS_META[status].label, date:fmtDate(new Date())});
-  }
-  c.status = status;
-  notifications.unshift({text:`Your complaint #${c.id} status changed to "${STATUS_META[status].label}".`, time:'just now', read:false});
-  toast('Status updated · citizen notified');
-  render();
-}
-
-function screenEscalated(){
-  const list = complaints.filter(c=>c.escalated);
-  return `
-  <div class="screen">
-    <div class="row gap10" style="margin:20px 0 16px;"><div class="icon-btn" onclick="back()">←</div><h2 class="display" style="margin:0;font-size:19px;">Escalated Complaints</h2></div>
-    <div class="glass-card tight" style="background:rgba(224,67,90,.08);border-color:rgba(224,67,90,.3);margin-bottom:14px;">
-      <p style="font-size:11.5px;color:var(--danger);margin:0;line-height:1.6;">Complaints unresolved past the 14-day window are auto-escalated to the next authority in the chain. History is permanent and cannot be deleted.</p>
-    </div>
-    ${list.map(c=>{
-      const idx = ESCALATION_CHAIN.indexOf('WARD_COUNCILLOR');
-      return `<div class="glass-card" style="margin-bottom:12px;cursor:pointer;" onclick="openGovComplaint('${c.id}')">
-        <div class="row between"><b style="font-size:14px;">#${c.id}</b><span class="badge badge-escalated">⚠ Escalated</span></div>
-        <div class="muted" style="font-size:12.5px;margin:6px 0;">${c.title}</div>
-        <div class="row between" style="font-size:11.5px;margin-top:8px;">
-          <span class="muted">Days Pending: <b style="color:var(--danger);">${c.daysPending}</b></span>
-          <span class="muted">Previous: Ward Councillor</span>
-        </div>
-        <div class="muted" style="font-size:11px;margin-top:4px;">Reason: complaint exceeded the 14-day resolution window.</div>
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
+/* ---------------- GOVERNMENT SIDE ----------------
+ * Dashboard, complaint detail, escalations and Analytics & Performance live in
+ * analytics/ui.js. They render what the backend returns: jurisdiction filtering,
+ * SLA escalation and scoring all happen server-side (app/analytics in citycare-backend).
+ */
 
 /* ============================= CONSTRUCTION & SATELLITE MAPPING ============================= */
 
